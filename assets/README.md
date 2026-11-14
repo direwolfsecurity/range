@@ -8,7 +8,6 @@ Everything that runs on the range lives here, sorted by the cell that owns it.
 | `blue\` | Blue | What students defend: pod domain controllers, workstations, DMZ web servers. |
 | `red\` | Red | Attack tooling: Kali builds, red team infrastructure, attack playbooks. |
 | `white\` | White | Scoring and exercise control: ForgeRange hooks, syslog, monitoring. Off-limits to both teams. |
-| `5g\` | Grey | The NTP Pi. It was built before this layout and stays where it is. `grey\README.md` points to it. |
 
 ## One folder per asset
 

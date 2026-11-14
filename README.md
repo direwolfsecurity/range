@@ -4,11 +4,10 @@ Build a cyber range on Proxmox: a small fake internet, pods to defend, attackers
 
 | Folder | What |
 |---|---|
-| `assets/grey/` | The fake internet: root and public DNS, time, certificate authority, whois, GeoIP, maps, mirrors |
+| `assets/grey/` | The fake internet: root and public DNS, time (`grey/time/`, a GPS-fed Pi), certificate authority, whois, GeoIP, maps, mirrors |
 | `assets/blue/` | What students defend: domain controllers, workstations, DMZ web servers |
 | `assets/red/` | Attack tooling and red team infrastructure |
 | `assets/white/` | Scoring and exercise control (hooks for [ForgeRange](https://github.com/trosenberg-dev/forgerange)), syslog, monitoring |
-| `assets/5g/` | GPS time server on a Raspberry Pi (grey cell) |
 | `docs/` | Range-wide documents |
 | `network/` | Templates: list your students in `student-list.csv`, and the scripts build the configs (coming) |
 

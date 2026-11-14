@@ -19,7 +19,7 @@ A student who looks up an IP then gets the same answer from all three.
 | # | Asset | Folder | What it is | Status |
 |---|---|---|---|---|
 | 0 | Registry file | `network\registry.csv` | The source of truth above, plus the generator scripts. | Not started |
-| 1 | NTP server | `assets\5g\ntp\` | GPS time from the 5G Pi. Handled in its own chat. | Guide written, Pi not set up |
+| 1 | Time server | `time\` | GPS-fed NTP on the 5G Pi, which is also the range's 5G link. Build guide: `time\5g\ntp\`. | Guide written, Pi not set up |
 | 2 | Root DNS (two servers) | `root-dns\` | Authoritative only, recursion off. Second server pulls the zone by transfer. | Not started |
 | 3 | TLD servers | `tld-dns\` | `.com`, `.org` and a range-only TLD, so delegation looks real. | Not started |
 | 4 | Public resolver | `public-dns\` | The range's "8.8.8.8" at 172.16.11.10. Uses our root hints. | Not started |
