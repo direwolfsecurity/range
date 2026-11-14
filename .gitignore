@@ -1,0 +1,42 @@
+# Secrets and filled-in configs: never commit
+_ready/
+.env
+*.secret
+*.key
+*.pem
+*.pfx
+*.p12
+seat-passwords*.csv
+
+# Real rosters stay local. Commit only the *.example.csv templates.
+student-list.csv
+
+# Shell, editor and OS leftovers
+.bash_history
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+
+# Runtime output
+temp/
+__pycache__/
+*.pyc
+*.log
+
+# VM and disk images: never in git (use build scripts or release downloads)
+*.qcow2
+*.vmdk
+*.vdi
+*.vhd
+*.vhdx
+*.ova
+*.ovf
+*.iso
+*.img
+*.raw
+*.zst
+
+# gencfg.py output: built per class, never committed
+network/out/

@@ -1,0 +1,14 @@
+[Unit]
+Description=GPS Snapshot Daemon (reads gpsd, writes dashboard JSON)
+After=gpsd.service chrony.service
+Wants=gpsd.service
+
+[Service]
+Type=simple
+User=www-data
+ExecStart=/usr/bin/python3 /opt/gpsdash/gps_snapshot_daemon.py
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GPS Dashboard</title>
+    <meta charset="UTF-8">
+
+    <!-- Leaflet Map -->
+    <!-- Local copy, so the page works with the range air-gapped (see README step 7) -->
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css"/>
+    <script src="vendor/leaflet/leaflet.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            background: #0d1117;
+            color: #e6edf3;
+            padding: 20px;
+        }
+
+        h1 { color: #58a6ff; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 15px;
+        }
+
+        .card {
+            background: #161b22;
+            padding: 15px;
+            border-radius: 12px;
+        }
+
+        .good { color: #3fb950; }
+        .warn { color: #d29922; }
+        .bad  { color: #f85149; }
+
+        #map {
+            height: 420px;
+            margin-top: 15px;
+            border-radius: 12px;
+        }
+
+        #alert {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .sat-line {
+            font-size: 13px;
+            margin: 2px 0;
+            padding: 2px 0;
+            border-bottom: 1px solid #222;
+        }
+    </style>
+</head>
+<body>
+
+<h1>📡 GPS Dashboard</h1>
+
+<div id="alert"></div>
+
+<div class="grid">
+    <div class="card">
+        <h3>📍 Location</h3>
+        <div id="location">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h3>🛰️ Satellites</h3>
+        <div id="satellites">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h3>📡 Satellite Tracking</h3>
+        <div id="satList">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h3>🕒 NTP Server</h3>
+        <div id="ntp">Loading...</div>
+    </div>
+
+    <div class="card">
+        <h3>📊 Status</h3>
+        <div id="status">Loading...</div>
+    </div> 
+
+    <div class="card">
+        <h3>⏱️ Time</h3>
+        <div id="time">Loading...</div>
+    </div>
+</div>
+
+<div id="map"></div>
+
+<script>
+// The map is optional. Without Leaflet (or without internet for the
+// map tiles) the rest of the page still works.
+let map = null, marker = null, trail = null;
+if (window.L) {
+    map = L.map('map').setView([0, 0], 2);
+    marker = L.marker([0, 0]).addTo(map);
+    trail = L.polyline([], {weight: 3}).addTo(map);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    }).addTo(map);
+} else {
+    document.getElementById("map").style.display = "none";
+}
+
+function show(v, digits) {
+    if (v === null || v === undefined) return "--";
+    return (digits !== undefined) ? Number(v).toFixed(digits) : v;
+}
+
+let path = [];
+let lastUpdateTime = Date.now();
+
+function getMovement(speed) {
+    return speed > 0.5 ? "MOVING 🚗" : "STATIONARY 🧍";
+}
+
+function getSignalQuality(data) {
+    if (data.fix_quality == "0") return {text: "NO FIX ❌", class: "bad"};
+    if (data.satellites_used < 4) return {text: "WEAK ⚠️", class: "warn"};
+    if (data.hdop > 2) return {text: "LOW ACCURACY ⚠️", class: "warn"};
+    return {text: "GOOD ✅", class: "good"};
+}
+
+function checkStale() {
+    let diff = (Date.now() - lastUpdateTime) / 1000;
+
+    if (diff > 5) {
+        document.getElementById("alert").innerHTML =
+            `<span class="bad">⚠️ GPS DATA STALE (${diff.toFixed(1)}s)</span>`;
+    }
+}
+
+async function updateGPS() {
+    try {
+        const res = await fetch('temp/gps.json?cache=' + Date.now());
+        const data = await res.json();
+
+        lastUpdateTime = Date.now();
+
+        let movement = getMovement(data.speed_knots);
+        let signal = getSignalQuality(data);
+
+        document.getElementById("location").innerHTML = `
+            Lat: ${show(data.lat, 6)}<br>
+            Lon: ${show(data.lon, 6)}<br>
+            Alt: ${show(data.altitude_m)} m<br>
+            Speed: ${show(data.speed_knots)} kn<br>
+            State: <b>${movement}</b>
+        `;
+
+        document.getElementById("satellites").innerHTML = `
+            Used: ${show(data.satellites_used)}<br>
+            In View: ${show(data.satellites_in_view)}<br>
+            HDOP: ${show(data.hdop)}
+        `;
+
+        document.getElementById("status").innerHTML = `
+            Fix: ${show(data.fix_mode)} (${data.status})<br>
+            Signal: <span class="${signal.class}">${signal.text}</span>
+        `;
+
+        document.getElementById("time").innerHTML = `
+            GPS: ${show(data.gps_time_utc)}<br>
+            Pi: ${data.timestamp_utc}
+        `;
+
+        if (data.ntp_stratum === undefined) {
+            document.getElementById("ntp").innerHTML =
+                "<span class='bad'>chrony not answering</span>";
+        } else {
+            let onGps = data.ntp_source === "GPS";
+            document.getElementById("ntp").innerHTML = `
+                Source: <span class="${onGps ? 'good' : 'warn'}">${data.ntp_source || "none"}</span><br>
+                Stratum: ${data.ntp_stratum}<br>
+                Offset: ${(data.ntp_offset_s * 1000).toFixed(3)} ms<br>
+                Leap: ${data.ntp_leap}
+            `;
+        }
+
+        document.getElementById("alert").innerHTML = "";
+
+        if (map && data.lat && data.lon) {
+            marker.setLatLng([data.lat, data.lon]);
+            map.setView([data.lat, data.lon], 16);
+
+            path.push([data.lat, data.lon]);
+            if (path.length > 200) path.shift();
+
+            trail.setLatLngs(path);
+        }
+
+    } catch (e) {
+        document.getElementById("alert").innerHTML =
+            `<span class="bad">⚠️ ERROR FETCHING GPS DATA</span>`;
+    }
+}
+
+async function updateSatellites() {
+    try {
+        const res = await fetch('temp/satellites.json?cache=' + Date.now());
+        const data = await res.json();
+
+        let html = "";
+
+        data.satellites.forEach(sat => {
+            html += `<div class="sat-line">
+                ${sat.gnss} ${sat.prn} | SNR ${show(sat.snr)} | El ${show(sat.elevation)}° | Az ${show(sat.azimuth)}° 
+                ${sat.used ? "<span class='good'>USED</span>" : ""}
+            </div>`;
+        });
+
+        document.getElementById("satList").innerHTML =
+            html || "<span class='warn'>No satellites in view yet</span>";
+
+    } catch (e) {
+        document.getElementById("satList").innerHTML =
+            "<span class='bad'>No satellite tracking data</span>";
+    }
+}
+
+setInterval(updateGPS, 1000);
+setInterval(updateSatellites, 2000);
+setInterval(checkStale, 2000);
+
+updateGPS();
+updateSatellites();
+</script>
+
+</body>
+</html>
+

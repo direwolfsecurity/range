@@ -1,0 +1,9 @@
+[Unit]
+Description=Check that modem GNSS is on (boot, then every 5 minutes)
+
+[Timer]
+OnBootSec=20s
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

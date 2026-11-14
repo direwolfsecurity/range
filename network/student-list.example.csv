@@ -1,0 +1,7 @@
+pod,id,name,status,host,fw_mgmt,bridge,nic
+1,s01,,active,,,,
+2,s02,,active,,,,
+3,s03,,active,,,,
+4,s04,,active,,,,
+5,s05,,spare,,,,
+6,teacher,,instructor,,,,

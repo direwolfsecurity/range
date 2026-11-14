@@ -1,0 +1,6 @@
+[Unit]
+Description=Turn on GNSS in the RM520N-GL modem
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/gpsdash/gnss_on.py

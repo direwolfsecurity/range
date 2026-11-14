@@ -1,0 +1,7 @@
+# /etc/default/gpsd  -  Dire Wolf range time server (Pi "5g")
+# gpsd owns the modem's NMEA port. Nothing else may open it.
+START_DAEMON="true"
+USBAUTO="false"
+DEVICES="/dev/ttyUSB1"
+# -n = start reading at boot, without waiting for a client (chrony needs this)
+GPSD_OPTIONS="-n -s 115200"
