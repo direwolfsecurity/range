@@ -2,6 +2,8 @@
 
 Build a cyber range on Proxmox: a small fake internet, pods to defend, attackers and a scoring cell.
 
+> **This repo is the build you deploy:** scripts, configs and guides. For a list of hardware, software and other resources worth knowing about, see [awesome-cyber-range](https://github.com/direwolfsecurity/awesome-cyber-range).
+
 | Folder | What |
 |---|---|
 | `assets/grey/` | The fake internet: root and public DNS, time (`grey/time/`, a GPS-fed Pi), certificate authority, whois, GeoIP, maps, mirrors |
