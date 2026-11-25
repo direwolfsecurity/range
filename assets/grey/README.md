@@ -56,7 +56,7 @@ Two jobs are part of other builds, not assets of their own:
 - Some tools skip private addresses before they open the database. Test each tool that will use it. Not checked yet.
 
 **Maps**
-- The full planet is on the order of 100 GB. A low-zoom world plus full detail for Pennsylvania is far smaller.
+- The full planet is on the order of 100 GB. A low-zoom world plus full detail for one state or region is far smaller.
 - Fonts and icon sprites must be hosted locally too. This is the usual air-gap failure.
 - Map data is not republished. A script fetches it from the source, with OpenStreetMap credit.
 
