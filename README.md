@@ -29,7 +29,8 @@ Build scripts are written with AI assistance, reviewed by Tim Rosenberg and test
 - **Guides, docs, diagrams and other content:** [CC BY-SA 4.0](LICENSE).
 - **Code and scripts:** [GPL-3.0](LICENSE-CODE).
 
-Use it in your class, change it, share it. Credit "Dire Wolf Security / Tim Rosenberg" and share your changes under the same terms.
+Use it in your class, change it, share it, even in something you sell. Two conditions: credit "Dire Wolf Security / Tim Rosenberg",
+and release your changed version under the same license so it stays free for the next person.
 
 ## About Dire Wolf Security
 

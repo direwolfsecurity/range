@@ -18,7 +18,7 @@ Usage (install.sh runs this for you):
   python3 make-styles.py --verify --out MAPS_DIR     (check only, change nothing)
 
 Exit code 0 = good, 1 = a problem that would break the map offline.
-License: CC BY-SA 4.0
+License: GPL-3.0
 """
 import argparse
 import json

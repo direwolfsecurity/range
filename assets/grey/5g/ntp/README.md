@@ -4,7 +4,7 @@ This turns a Raspberry Pi with a Waveshare 5G HAT into an NTP server.
 It gets time from GPS satellites, so it keeps working when the range has no internet. It needs no SIM card.
 It also runs a web page that shows the satellites and the time-server status.
 
-Licence: CC BY-SA 4.0, Dire Wolf Security.
+License: CC BY-SA 4.0 for this guide, GPL-3.0 for the scripts. Dire Wolf Security.
 
 ## What you need
 

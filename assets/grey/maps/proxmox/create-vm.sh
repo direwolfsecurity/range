@@ -12,7 +12,7 @@
 #
 # Change the values below to match the host. Check bridge names against
 # network\proxmox-hosts.csv before running.
-# License: CC BY-SA 4.0
+# License: GPL-3.0
 set -euo pipefail
 
 VMID=911

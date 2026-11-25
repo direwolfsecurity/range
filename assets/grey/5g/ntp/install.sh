@@ -13,7 +13,7 @@
 # Safe to run again. Files it replaces are first copied to /var/backups/direwolf-ntp/.
 # A tuned offset already on the Pi is kept unless --offset is given.
 #
-# Licence: CC BY-SA 4.0, Dire Wolf Security.
+# License: GPL-3.0, Dire Wolf Security.
 
 set -euo pipefail
 

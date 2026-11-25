@@ -21,7 +21,7 @@ Both programs run as pinned Docker images, so every build is the same.
 - Tile schema and styles © [OpenMapTiles](https://openmaptiles.org/) (CC BY 4.0 design, BSD 3-Clause code). Credit "© OpenMapTiles".
 - Fonts: Noto Sans, Metropolis, Open Sans (SIL Open Font License). Fetched from `openmaptiles/fonts`.
 - Planetiler: Apache 2.0. TileServer GL: BSD 2-Clause.
-- This folder (scripts and guide): CC BY-SA 4.0, Dire Wolf Security.
+- This folder: scripts under GPL-3.0, this guide under CC BY-SA 4.0. Dire Wolf Security.
 
 The attribution text the server sends with every style is set in `maps.conf` (`ATTRIBUTION`).
 

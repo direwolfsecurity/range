@@ -19,7 +19,7 @@
 #        --rebuild-tiles   build the tiles again even though a tile file exists
 #
 # Settings live in maps.conf next to this script.
-# License: CC BY-SA 4.0. Map data: (c) OpenStreetMap contributors, ODbL.
+# License: GPL-3.0. Map data: (c) OpenStreetMap contributors, ODbL.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

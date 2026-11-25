@@ -4,7 +4,7 @@ This turns the Pi with the Waveshare RM520N-GL 5G HAT into the NTP server for th
 It gets time from GPS satellites, so it works with the range air-gapped (CLOSED mode) and needs no SIM card.
 The satellite dashboard web page keeps working.
 
-Licence: CC BY-SA 4.0, Dire Wolf Security.
+License: CC BY-SA 4.0 for this guide, GPL-3.0 for the scripts. Dire Wolf Security.
 
 ## How it fits together
 
