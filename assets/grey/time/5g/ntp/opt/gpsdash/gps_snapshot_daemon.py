@@ -78,6 +78,59 @@ def ntp_status():
         return {}
 
 
+GNSS_NAMES = {0: "GPS", 1: "SBAS", 2: "Galileo", 3: "BeiDou", 4: "IMES", 5: "QZSS", 6: "GLONASS", 7: "NavIC"}
+
+
+def merge_satellites(sats):
+    """One entry per satellite.
+
+    gpsd lists a satellite once per signal band it hears (for example GPS L1 and L5),
+    so the same satellite can appear twice, often once with SNR 0. Merge them:
+    used if any band is used, strongest SNR, and position from the strongest band.
+    """
+    groups = {}
+    for s in sats:
+        gnssid = s.get("gnssid")
+        # svid is the satellite's own number in its system (BeiDou 23, not gpsd's PRN 423).
+        number = s.get("svid") or s.get("PRN")
+        groups.setdefault((gnssid, number), []).append(s)
+
+    merged = []
+    for (gnssid, number), group in groups.items():
+        best = max(group, key=lambda s: s.get("ss") or 0)
+        snr = best.get("ss") or 0
+        el, az = best.get("el"), best.get("az")
+        if not el and not az:
+            # Some entries come with 0/0 when the position is unknown. Look in the other bands first.
+            known = [s for s in group if s.get("el") or s.get("az")]
+            el, az = (known[0].get("el"), known[0].get("az")) if known else (None, None)
+        merged.append({
+            "prn": best.get("PRN"),
+            "svid": number,
+            "gnss": GNSS_NAMES.get(gnssid, "Other"),
+            "snr": snr,
+            "elevation": el,
+            "azimuth": az,
+            "used": any(s.get("used") for s in group),
+            "tracked": snr > 0,
+            "signals": sum(1 for s in group if (s.get("ss") or 0) > 0),
+        })
+    # Used first, then tracked by signal strength, then the rest by system and number.
+    merged.sort(key=lambda x: (not x["used"], not x["tracked"], -x["snr"], x["gnss"], x["svid"] or 0))
+    return merged
+
+
+def system_counts(merged):
+    """In view / tracked / used, per satellite system."""
+    counts = {}
+    for s in merged:
+        c = counts.setdefault(s["gnss"], {"in_view": 0, "tracked": 0, "used": 0})
+        c["in_view"] += 1
+        c["tracked"] += s["tracked"]
+        c["used"] += s["used"]
+    return counts
+
+
 def atomic_write(path, content):
     tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -96,7 +149,7 @@ def build(ntp):
 
     mode = tpv.get("mode", 0)
     speed = tpv.get("speed")
-    used = [s for s in sats if s.get("used")]
+    merged = merge_satellites(sats)
 
     payload = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -110,8 +163,9 @@ def build(ntp):
         "altitude_m": tpv.get("altMSL", tpv.get("alt")) if mode >= 3 else None,
         "fix_quality": "1" if mode >= 2 else "0",
         "fix_mode": {2: "2D", 3: "3D"}.get(mode, "none"),
-        "satellites_used": len(used) if sats else None,
-        "satellites_in_view": len(sats) if sats else None,
+        "satellites_used": sum(s["used"] for s in merged) if merged else None,
+        "satellites_tracked": sum(s["tracked"] for s in merged) if merged else None,
+        "satellites_in_view": len(merged) if merged else None,
         "hdop": sky.get("hdop"),
     }
     payload.update(ntp)
@@ -127,18 +181,8 @@ def build(ntp):
 
     sat_payload = {
         "timestamp_utc": payload["timestamp_utc"],
-        "satellites": sorted(
-            [{
-                "prn": s.get("PRN"),
-                "gnss": {0: "GPS", 1: "SBAS", 2: "Galileo", 3: "BeiDou",
-                         5: "QZSS", 6: "GLONASS"}.get(s.get("gnssid"), ""),
-                "snr": s.get("ss"),
-                "elevation": s.get("el"),
-                "azimuth": s.get("az"),
-                "used": bool(s.get("used")),
-            } for s in sats],
-            key=lambda x: (not x["used"], -(x["snr"] or 0)),
-        ),
+        "systems": system_counts(merged),
+        "satellites": merged,
     }
     return payload, sat_payload
 

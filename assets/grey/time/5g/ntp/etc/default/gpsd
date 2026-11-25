@@ -4,4 +4,8 @@ START_DAEMON="true"
 USBAUTO="false"
 DEVICES="/dev/ttyUSB1"
 # -n = start reading at boot, without waiting for a client (chrony needs this)
-GPSD_OPTIONS="-n -s 115200"
+# -b = read-only. gpsd normally writes probe commands to the port to identify the GPS.
+#      The SIMCom SIM8200EA-M2 stops sending NMEA when it gets them, so gpsd must only listen.
+#      (Tested 2026-11-24: without -b, gpsd stalls after USB enumeration; with -b, 3D fix at once.)
+# No -s: the port is USB, so the baud rate setting does nothing.
+GPSD_OPTIONS="-n -b"

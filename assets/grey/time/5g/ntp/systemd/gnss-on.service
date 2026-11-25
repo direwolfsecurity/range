@@ -1,5 +1,5 @@
 [Unit]
-Description=Turn on GNSS in the RM520N-GL modem
+Description=Turn on GNSS in the 5G modem
 
 [Service]
 Type=oneshot

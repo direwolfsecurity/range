@@ -46,12 +46,33 @@
             margin-bottom: 10px;
         }
 
-        .sat-line {
-            font-size: 13px;
-            margin: 2px 0;
-            padding: 2px 0;
-            border-bottom: 1px solid #222;
+        /* ---- Satellite list ---- */
+        .sys-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+        .sys-chip {
+            font-size: 12px; padding: 3px 8px; border-radius: 10px;
+            background: #0d1117; border: 1px solid var(--sys);
         }
+        .sys-chip b { color: var(--sys); }
+        .sat-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .sat-table th { text-align: left; color: #8b949e; font-weight: normal; padding: 2px 4px; border-bottom: 1px solid #30363d; }
+        .sat-table td { padding: 3px 4px; border-bottom: 1px solid #21262d; white-space: nowrap; }
+        .sat-table td.num, .sat-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .sat-name { border-left: 3px solid var(--sys); padding-left: 6px; }
+        .snr-bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--sys); vertical-align: middle; }
+        .sat-table td.bar { width: 64px; padding-left: 6px; }
+        /* The tracking card is wider than the others, on screens big enough for it. */
+        @media (min-width: 760px) { .card.wide { grid-column: span 2; } }
+        .untracked td { color: #6e7681; }
+        /* Fixed height (about 15 rows) so the page below never moves as satellites come and go. */
+        .sat-scroll { height: 340px; overflow-y: auto; }
+        .sat-table th { position: sticky; top: 0; background: #161b22; z-index: 1; }
+        .sat-footer { height: 30px; }
+        #satToggle {
+            margin-top: 8px; background: none; border: 1px solid #30363d; color: #8b949e;
+            border-radius: 6px; padding: 3px 10px; cursor: pointer; font-size: 12px;
+        }
+        #satToggle:hover { color: #e6edf3; border-color: #8b949e; }
+        #satToggle:disabled { opacity: 0.4; cursor: default; }
     </style>
 </head>
 <body>
@@ -71,7 +92,7 @@
         <div id="satellites">Loading...</div>
     </div>
 
-    <div class="card">
+    <div class="card wide">
         <h3>📡 Satellite Tracking</h3>
         <div id="satList">Loading...</div>
     </div>
@@ -95,17 +116,30 @@
 <div id="map"></div>
 
 <script>
+// ---- Settings ----
+// Map tiles. Point this at the range's own tile server for air-gapped use.
+const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ATTRIBUTION = '© OpenStreetMap contributors';
+
+// One colour per satellite system, used in the list (and later the map and sky plot).
+const SYSTEM_COLOURS = {
+    GPS: '#58a6ff', GLONASS: '#f85149', Galileo: '#a371f7', BeiDou: '#d29922',
+    QZSS: '#39c5cf', SBAS: '#8b949e', NavIC: '#db61a2', Other: '#8b949e'
+};
+const SYSTEM_ORDER = ['GPS', 'GLONASS', 'Galileo', 'BeiDou', 'QZSS', 'SBAS', 'NavIC', 'Other'];
+
 // The map is optional. Without Leaflet (or without internet for the
 // map tiles) the rest of the page still works.
 let map = null, marker = null, trail = null;
 if (window.L) {
     map = L.map('map').setView([0, 0], 2);
-    marker = L.marker([0, 0]).addTo(map);
+    // A drawn dot instead of Leaflet's default pin, which needs extra image files.
+    marker = L.circleMarker([0, 0], {
+        radius: 8, color: '#ffffff', weight: 2, fillColor: '#3fb950', fillOpacity: 1
+    }).addTo(map);
     trail = L.polyline([], {weight: 3}).addTo(map);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap'
-    }).addTo(map);
+    L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION }).addTo(map);
 } else {
     document.getElementById("map").style.display = "none";
 }
@@ -116,6 +150,8 @@ function show(v, digits) {
 }
 
 let path = [];
+let centredOnce = false;   // centre the map on the first fix only, so the user can zoom and pan freely
+let showUntracked = false; // satellites the receiver knows about but cannot hear (SNR 0)
 let lastUpdateTime = Date.now();
 
 function getMovement(speed) {
@@ -158,6 +194,7 @@ async function updateGPS() {
 
         document.getElementById("satellites").innerHTML = `
             Used: ${show(data.satellites_used)}<br>
+            Tracked: ${show(data.satellites_tracked)}<br>
             In View: ${show(data.satellites_in_view)}<br>
             HDOP: ${show(data.hdop)}
         `;
@@ -189,7 +226,10 @@ async function updateGPS() {
 
         if (map && data.lat && data.lon) {
             marker.setLatLng([data.lat, data.lon]);
-            map.setView([data.lat, data.lon], 16);
+            if (!centredOnce) {
+                map.setView([data.lat, data.lon], 16);
+                centredOnce = true;
+            }
 
             path.push([data.lat, data.lon]);
             if (path.length > 200) path.shift();
@@ -203,22 +243,66 @@ async function updateGPS() {
     }
 }
 
+function sysStyle(name) {
+    return `--sys:${SYSTEM_COLOURS[name] || SYSTEM_COLOURS.Other}`;
+}
+
+function satRow(sat) {
+    const snr = sat.snr || 0;
+    const bar = snr > 0 ? `<span class="snr-bar" style="width:${Math.min(snr, 50) * 1.2}px"></span>` : "";
+    return `<tr class="${sat.tracked ? '' : 'untracked'}" style="${sysStyle(sat.gnss)}">
+        <td><span class="sat-name">${sat.gnss} ${show(sat.svid)}</span></td>
+        <td class="num">${snr}</td>
+        <td class="bar">${bar}</td>
+        <td class="num">${sat.elevation === null ? '--' : sat.elevation + '°'}</td>
+        <td class="num">${sat.azimuth === null ? '--' : sat.azimuth + '°'}</td>
+        <td>${sat.used ? "<span class='good'>USED</span>" : ""}</td>
+    </tr>`;
+}
+
 async function updateSatellites() {
     try {
         const res = await fetch('temp/satellites.json?cache=' + Date.now());
         const data = await res.json();
+        const sats = data.satellites || [];
 
-        let html = "";
+        if (sats.length === 0) {
+            document.getElementById("satList").innerHTML =
+                "<span class='warn'>No satellites in view yet</span>";
+            return;
+        }
 
-        data.satellites.forEach(sat => {
-            html += `<div class="sat-line">
-                ${sat.gnss} ${sat.prn} | SNR ${show(sat.snr)} | El ${show(sat.elevation)}° | Az ${show(sat.azimuth)}° 
-                ${sat.used ? "<span class='good'>USED</span>" : ""}
-            </div>`;
-        });
+        // One chip per system: used / tracked / in view.
+        const systems = data.systems || {};
+        const chips = SYSTEM_ORDER.filter(n => systems[n]).map(n => {
+            const c = systems[n];
+            return `<span class="sys-chip" style="${sysStyle(n)}" title="used / tracked / in view">
+                <b>${n}</b> ${c.used} / ${c.tracked} / ${c.in_view}</span>`;
+        }).join("");
 
-        document.getElementById("satList").innerHTML =
-            html || "<span class='warn'>No satellites in view yet</span>";
+        const tracked = sats.filter(s => s.tracked);
+        const untracked = sats.filter(s => !s.tracked);
+        const rows = tracked.concat(showUntracked ? untracked : []).map(satRow).join("");
+
+        const toggle = `<button id="satToggle" ${untracked.length === 0 ? "disabled" : ""}
+                onclick="showUntracked = !showUntracked; updateSatellites();">
+                ${showUntracked ? "Hide" : "Show"} ${untracked.length} not tracked (SNR 0)</button>`;
+
+        // Keep the reader's scroll position across refreshes.
+        const old = document.querySelector("#satList .sat-scroll");
+        const scrollTop = old ? old.scrollTop : 0;
+
+        document.getElementById("satList").innerHTML = `
+            <div class="sys-summary">${chips}</div>
+            <div class="sat-scroll">
+                <table class="sat-table">
+                    <tr><th>Satellite</th><th class="num" title="Signal-to-noise ratio, dB-Hz. Above about 30 is strong.">SNR</th><th></th><th class="num">Elev</th><th class="num">Az</th><th></th></tr>
+                    ${rows || "<tr><td colspan='6' class='warn'>None tracked yet</td></tr>"}
+                </table>
+            </div>
+            <div class="sat-footer">${toggle}</div>`;
+
+        document.querySelector("#satList .sat-scroll").scrollTop = scrollTop;
 
     } catch (e) {
         document.getElementById("satList").innerHTML =
