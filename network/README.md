@@ -83,7 +83,7 @@ Set in `range.ini` under `[profiles]`.
 
 - **The range router for `shared` mode.** Something has to be `.254` on each pod's outside network. With
   `cisco_core_edge` the edge routers do it. For an all-virtual range it will be a router VM on the grey cell.
-- **The OPNsense template build guide**, including the API key that [ForgeRange](https://github.com/trosenberg-dev/forgerange)
+- **The OPNsense template build guide**, including the API key that [ForgeRange](https://github.com/direwolfsecurity/forgerange)
   uses to change firewall rules during a lab.
 
 ## Rules
