@@ -38,3 +38,5 @@ It sells nothing, offers no services and is not tied to any school, employer or 
 Any resemblance to a real organization is a coincidence.
 
 The content is real, though: written by Tim Rosenberg, free to use, copy and change.
+
+Views are my own (Tim Rosenberg), not those of any school, employer or other organization.
