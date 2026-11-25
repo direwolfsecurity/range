@@ -6,7 +6,7 @@
 #   bash create-vm.sh                 show what it would do
 #   bash create-vm.sh --go            create the VM (build size: 24 cores, 48 GB RAM, 3 disks)
 #   bash create-vm.sh --to-grey --go  move the NIC to GREY (VLAN 110). VM must be shut down.
-#                                     Run this one on pve5 after the restore (README step 10).
+#                                     Run this one on pve5 after the restore (README step 9).
 #   bash create-vm.sh --slim --go     after the build: 4 cores, 8 GB RAM, delete the build disk.
 #                                     VM must be shut down, and install.sh --drop-build-disk done first.
 #
@@ -63,7 +63,7 @@ case "$MODE" in
       --scsi2 "$STORAGE_BUILD:1200,iothread=1,discard=on,ssd=1,backup=0" \
       --ide2 "$ISO,media=cdrom" --boot "order=scsi0;ide2" \
       --description "Dire Wolf grey cell map tile server (TileServer GL). GREY 172.16.11.60. assets/maps"
-    echo "Next: start VM $VMID, install Ubuntu Server 24.04 on the 64 GB disk only (README step 3)."
+    echo "Next: start VM $VMID, install Ubuntu Server 24.04 on the 64 GB disk only (README step 2)."
     ;;
   grey)
     stopped
