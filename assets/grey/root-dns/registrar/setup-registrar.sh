@@ -49,6 +49,8 @@ done
 log()  { echo -e "\e[1;32m[+]\e[0m $*"; }
 warn() { echo -e "\e[1;33m[!]\e[0m $*"; }
 die()  { echo -e "\e[1;31m[x]\e[0m $*" >&2; exit 1; }
+# If any command fails, say which one, so a half-finished setup is never silent.
+trap 'echo -e "\e[1;31m[x]\e[0m Stopped at line $LINENO: $BASH_COMMAND" >&2' ERR
 
 [[ $EUID -eq 0 ]] || die "Run as root (sudo)."
 [[ -n "$ROOT1_IP" && -n "$ROOT2_IP" ]] || die "Set --root1-ip and --root2-ip."
@@ -110,6 +112,7 @@ EOF
   systemctl restart named
   sleep 3; rndc retransfer "$CATZ" 2>/dev/null || true
   log "Secondary subscribed. TLDs added on the primary will appear here within seconds."
+  log "The secondary has no web site. The registrar site runs on the primary: http://${ROOT1_IP}/"
   exit 0
 fi
 

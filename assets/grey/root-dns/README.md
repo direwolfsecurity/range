@@ -71,7 +71,7 @@ cd registrar
 sudo bash setup-registrar.sh --root1-ip 10.0.0.10 --root2-ip 10.0.0.11
 ```
 
-- The site is `http://nic.lab/` (or the primary's IP). The admin page is `/admin/`, user `admin`.
+- The site is `http://nic.lab/` (or the primary's IP). It runs on the primary only. The secondary gets the TLD zones, not Apache, so it has no web page. The admin page is `/admin/`, user `admin`.
 - With no `--admin-pass`, a random password is made. It is shown once and saved in `/root/registrar-admin.txt` on the primary.
 - Students search for a name, then pick either their own name servers (with glue when needed) or a simple IP (an A record plus `www`).
 - Each domain gets a management code, shown once. It lets the owner change or delete the domain later. The admin page can reset it.
@@ -137,6 +137,7 @@ The registrar admin page also shows each zone's serial on both roots, with "in s
 | Secondary has no `aa` flag | The primary must be up first. Then on the secondary: `sudo rndc retransfer .` |
 | Secondary is missing a registrar TLD | `sudo rndc retransfer catz.invalid` on the secondary. |
 | Registrar says "publishing to DNS failed" | Run `sudo registrar-apply` on the primary and read the error. It rolls back bad changes. |
+| The primary shows Apache's default page | The registrar setup stopped part way. Run it again and look for a red `[x]` line near the end. `ls /etc/apache2/sites-enabled/` should list only `registrar.conf`. |
 | Registrar stopped working after re-running step 1 | Step 1 rewrites BIND's settings. Run step 3 again on that VM. |
 | Resolver answers itself but other machines get REFUSED or time out | Run step 4 again with `--serve` and their networks. |
 | Resolver gives SERVFAIL for everything | DNSSEC checking is still on, or forwarders are set. Re-run step 4 (`-ClearForwarders` on Windows). |
