@@ -14,6 +14,8 @@ Generates:
   /etc/bind/zones/registrar/db.catalog  catalog zone (secondary auto-provisions TLDs)
   /etc/bind/zones/root.registrar        root delegations for hosted TLDs
   /etc/bind/named.conf.registrar        zone statements
+
+License: GPL-3.0, Dire Wolf Security.
 """
 import configparser, fcntl, grp, hashlib, ipaddress, json, os, re, sqlite3, subprocess, sys, time
 

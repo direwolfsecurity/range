@@ -15,6 +15,8 @@
 #
 # Requires: static IPs already set (netplan), and apt access to bind9 at
 # install time (local mirror, apt-cacher, or install before going offline).
+#
+# License: GPL-3.0, Dire Wolf Security.
 # =============================================================================
 set -euo pipefail
 
@@ -30,7 +32,7 @@ ROLE=""                              # "primary" | "secondary" | "" = auto
 ROOT_TTL="518400"                    # TTL for root NS / glue (6 days, like real root)
 # -----------------------------------------------------------------------------
 
-usage() { sed -n '2,20p' "$0"; exit 1; }
+usage() { sed -n '2,19p' "$0"; exit 1; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -69,8 +71,8 @@ fi
 log "Configuring this host as the ROOT ${ROLE^^} ($( [[ $ROLE == primary ]] && echo "$R1 / $ROOT1_IP" || echo "$R2 / $ROOT2_IP"))"
 
 # ---- Install ----------------------------------------------------------------
-if ! command -v named >/dev/null 2>&1; then
-  log "Installing bind9..."
+if ! command -v named >/dev/null 2>&1 || ! command -v dig >/dev/null 2>&1; then
+  log "Installing bind9 and dig..."
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -y || warn "apt-get update failed (offline?) — trying install anyway"
   apt-get install -y bind9 bind9-utils bind9-dnsutils || die "Could not install bind9. Point apt at a local mirror or install before going offline."

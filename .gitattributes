@@ -8,6 +8,8 @@
 *.timer       text eol=lf
 *.conf        text eol=lf
 *.interfaces  text eol=lf
+*.php         text eol=lf
+registrar-apply  text eol=lf
 assets/**/etc/**  text eol=lf
 
 # Runs on Windows.

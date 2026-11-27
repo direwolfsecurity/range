@@ -11,6 +11,10 @@
 #   sudo ./set-root-hints-ubuntu.sh --root1-ip 10.0.0.10 --root2-ip 10.0.0.11
 #   sudo ./set-root-hints-ubuntu.sh ... --install bind9     # install a resolver too
 #   sudo ./set-root-hints-ubuntu.sh ... --hints-only        # just write the file
+#
+# Do NOT run this on the root servers themselves (it stops if it sees one).
+#
+# License: GPL-3.0, Dire Wolf Security.
 # =============================================================================
 set -euo pipefail
 
@@ -35,7 +39,7 @@ while [[ $# -gt 0 ]]; do
     --root2-ip6)  ROOT2_IP6="$2";  shift 2 ;;
     --install)    INSTALL="$2";    shift 2 ;;
     --hints-only) HINTS_ONLY=1;    shift ;;
-    -h|--help)    sed -n '2,15p' "$0"; exit 0 ;;
+    -h|--help)    sed -n '2,17p' "$0"; exit 0 ;;
     *) echo "Unknown option: $1"; exit 1 ;;
   esac
 done
@@ -48,6 +52,11 @@ die()  { echo -e "\e[1;31m[x]\e[0m $*" >&2; exit 1; }
 [[ -n "$ROOT1_IP" && -n "$ROOT2_IP" ]] || die "Set ROOT1_IP and ROOT2_IP (edit the script or use flags)."
 
 R1="${ROOT1_NAME%.}."; R2="${ROOT2_NAME%.}."
+
+# A root server answers for "." itself and has no use for root hints.
+if grep -qs "Managed by setup-root-dns.sh" /etc/bind/named.conf; then
+  die "This machine is a range ROOT server (setup-root-dns.sh). Run this script on the resolvers, not here."
+fi
 TS=$(date +%Y%m%d-%H%M%S)
 
 # ---- Optional install -------------------------------------------------------
@@ -143,7 +152,8 @@ if command -v unbound >/dev/null 2>&1 && [[ -d /etc/unbound ]]; then
     [[ -f "$f" ]] && mv "$f" "$f.disabled-$TS" && log "  disabled $(basename "$f")"
   done
   # Any other trust-anchor lines in drop-ins
-  grep -lE '^\s*(auto-)?trust-anchor' /etc/unbound/unbound.conf.d/*.conf 2>/dev/null | while read -r f; do
+  # "|| true": finding no other trust anchors is normal and must not stop the script (set -e).
+  { grep -lE '^\s*(auto-)?trust-anchor' /etc/unbound/unbound.conf.d/*.conf 2>/dev/null || true; } | while read -r f; do
     sed -i -E 's/^(\s*)((auto-)?trust-anchor)/\1# range-disabled: \2/' "$f"; log "  commented trust anchors in $f"
   done
 

@@ -18,6 +18,9 @@
 
 .EXAMPLE
   .\Set-RangeRootHints.ps1 -Root1IP 10.0.0.10 -Root2IP 10.0.0.11 -ClearForwarders
+
+.NOTES
+  License: GPL-3.0, Dire Wolf Security.
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(

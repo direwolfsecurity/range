@@ -1,5 +1,6 @@
 <?php
 // Range Registrar — shared library. Lives OUTSIDE the web root (/opt/registrar).
+// License: GPL-3.0, Dire Wolf Security.
 declare(strict_types=1);
 
 const REG_INI = '/etc/registrar/registrar.ini';

@@ -13,6 +13,8 @@
 #   sudo ./add-tld.sh add com   ns1.nic.com   10.0.1.53
 #   sudo ./add-tld.sh add com   ns2.nic.com   10.0.1.54     # 2nd NS for .com
 #   sudo ./add-tld.sh add corp  dc01.corp     10.20.0.10    # fake internal TLD
+#
+# License: GPL-3.0, Dire Wolf Security.
 # =============================================================================
 set -euo pipefail
 
@@ -78,5 +80,5 @@ case "${1:-}" in
   bump)
     apply ;;
   *)
-    sed -n '2,18p' "$0"; exit 1 ;;
+    sed -n '2,17p' "$0"; exit 1 ;;
 esac

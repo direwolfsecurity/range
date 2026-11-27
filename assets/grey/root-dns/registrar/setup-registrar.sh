@@ -18,6 +18,8 @@
 #     --admin-pass 'S3cret!'       admin password (random if omitted)
 #     --title "ACME Range Registrar"
 #     --role primary|secondary     override auto-detection
+#
+# License: GPL-3.0, Dire Wolf Security.
 # =============================================================================
 set -euo pipefail
 
@@ -39,7 +41,7 @@ while [[ $# -gt 0 ]]; do
     --tlds) TLDS="$2"; shift 2 ;;              --registrar-domain) REGISTRAR_DOMAIN="$2"; shift 2 ;;
     --admin-pass) ADMIN_PASS="$2"; shift 2 ;;  --title) TITLE="$2"; shift 2 ;;
     --role) ROLE="$2"; shift 2 ;;
-    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     *) echo "Unknown option $1"; exit 1 ;;
   esac
 done

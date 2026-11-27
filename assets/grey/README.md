@@ -20,7 +20,7 @@ A student who looks up an IP then gets the same answer from all three.
 |---|---|---|---|---|
 | 0 | Registry file | `network\registry.csv` | The source of truth above, plus the generator scripts. | Not started |
 | 1 | Time server | `time\` | GPS-fed NTP on the 5G Pi, which is also the range's 5G link. Build guide: `time\5g\ntp\`. | Guide written, Pi not set up |
-| 2 | Root DNS (two servers) | `root-dns\` | Authoritative only, recursion off. Second server pulls the zone by transfer. | Not started |
+| 2 | Root DNS (two servers) | `root-dns\` | Authoritative only, recursion off. Second server pulls the zone by transfer. Includes root-hint scripts for resolvers. | Scripts written and tested on a test machine, not built on the range yet |
 | 3 | TLD servers | `tld-dns\` | `.com`, `.org` and a range-only TLD, so delegation looks real. | Not started |
 | 4 | Public resolver | `public-dns\` | The range's "8.8.8.8" at 172.16.11.10. Uses our root hints. | Not started |
 | 5 | Certificate authority | `ca\` | Root CA with ACME (step-ca): a fake Let's Encrypt. Without it nothing has working HTTPS. | Not started |
@@ -29,7 +29,7 @@ A student who looks up an IP then gets the same answer from all three.
 | 8 | GeoIP database | `geoip\` | MaxMind-format (MMDB) City and ASN files built from the registry file, RFC 1918 ranges included. | Not started |
 | 9 | Map tile server | `maps\` | TileServer GL with OpenStreetMap vector tiles. Serves vector and PNG tiles. | Not started |
 | 10 | Package mirrors | `mirrors\` | Kali/Debian apt, PyPI, container registry, Windows updates. The staging repo at .40 is the start. | Not started |
-| 11 | Domain registrar | `registrar\` | Web portal where students register a domain and get a delegation. | Not started |
+| 11 | Domain registrar | `root-dns\registrar\` | Web portal where students register a domain and get a delegation. Runs on the two root servers. | Scripts written and tested on a test machine, not built on the range yet |
 | 12 | Mail and Git host | `mail\`, `git\` | Internet mail and Gitea, for phishing and code-leak scenarios. | Not started |
 | 13 | Update and intel feeds | `feeds\` | Suricata rules, ClamAV signatures, GeoIP update endpoint, IP reputation blocklist. | Not started |
 | 14 | Offline reference | `reference\` | Kiwix, so students have documentation in CLOSED mode. | Not started |
@@ -66,7 +66,7 @@ Two jobs are part of other builds, not assets of their own:
 
 ## Open decisions (Tim)
 
-1. DNSSEC: sign our root, or turn validation off on resolvers?
+1. DNSSEC: sign our root, or turn validation off on resolvers? (The root DNS scripts turn it off for now.)
 2. Name of the range-only TLD.
 3. Name of the fake registry.
 4. Map coverage: how much of the world at full detail?
