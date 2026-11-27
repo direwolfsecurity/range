@@ -138,7 +138,9 @@ sudo bash install.sh --cert              # prints the certificate, to paste into
 
 The script makes a self-signed certificate for `mqtt.lab` and the server's address, valid for 10 years.
 Clients trust that one file. No certificate authority key is made or kept.
-When the range certificate authority (`../ca/`, not built yet) exists, put its `server.crt` and `server.key` in `/etc/mosquitto/certs/` and re-run; the script keeps certificates it finds there.
+To use the range certificate authority (`../ca/`) instead, make a certificate on the CA server with `sudo bash install.sh --issue mqtt.lab --san 172.16.11.83 --go`,
+copy the two files here as `/etc/mosquitto/certs/server.crt` and `server.key`, and re-run; the script keeps certificates it finds there.
+Clients then trust the range root (`http://ca.lab/root_ca.crt`, or `root_ca.h` for ESP32) instead of this one file.
 
 ```bash
 mosquitto_sub -h mqtt.lab -p 8883 --cafile mqtt-lab.crt -u monitor -P '<password>' -t 'cybercity/#' -v

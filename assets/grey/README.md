@@ -3,8 +3,8 @@
 Grey assets are the fake internet. Neither team controls them; either team may use them.
 They live on VLAN 110 (GREY, 172.16.11.0/24), mostly on pve-r05.
 
-This list was agreed on 2026-11-13. It is in rough build order. Nothing below is built yet except where noted.
-No addresses are assigned yet except the planned public resolver (172.16.11.10) and the proposed NTP address (172.16.11.123) and MQTT address (172.16.11.83).
+This list was agreed on 2026-11-13. It is in rough build order. The Status column says what is built.
+Addresses in use or proposed on GREY: resolver 172.16.11.10, roots 172.16.11.11 and .12, CA .20 (proposed), connectivity check .30 (proposed), maps .60, MQTT .83, NTP .123.
 
 ## The rule that ties it together
 
@@ -21,17 +21,17 @@ To put one asset on a VM, clone only its folder. See "Get one asset onto a VM" i
 | # | Asset | Folder | What it is | Status |
 |---|---|---|---|---|
 | 0 | Registry file | `network\registry.csv` | The source of truth above, plus the generator scripts. | Not started |
-| 1 | Time server | `time\` | GPS-fed NTP on the 5G Pi, which is also the range's 5G link. Build guide: `time\5g\ntp\`. | Guide written, Pi not set up |
-| 2 | Root DNS (two servers) | `root-dns\` | Authoritative only, recursion off. Second server pulls the zone by transfer. Includes root-hint scripts for resolvers. | Scripts written and tested on a test machine, not built on the range yet |
+| 1 | Time server | `time\` | GPS-fed NTP on the 5G Pi, which is also the range's 5G link. Build guide: `time\5g\ntp\`. | Pi set up, waiting for a cable move onto the range (Tuesday 2026-12-01) |
+| 2 | Root DNS (two servers) | `root-dns\` | Authoritative only, recursion off. Second server pulls the zone by transfer. Includes root-hint scripts for resolvers. | Built on the range (root-a .11, root-b .12) |
 | 3 | TLD servers | `tld-dns\` | `.com`, `.org` and a range-only TLD, so delegation looks real. | Not started |
-| 4 | Public resolver | `public-dns\` | The range's "8.8.8.8" at 172.16.11.10. Uses our root hints. | Not started |
-| 5 | Certificate authority | `ca\` | Root CA with ACME (step-ca): a fake Let's Encrypt. Without it nothing has working HTTPS. | Not started |
-| 6 | Connectivity checks | `connectivity-check\` | Fake the URLs that Windows, Android, Apple and Firefox probe, so machines do not report "No Internet". | Not started |
+| 4 | Public resolver | `root-dns\` (`set-root-hints-ubuntu.sh`) | The range's "8.8.8.8" at 172.16.11.10. Unbound with our root hints. | Built on the range |
+| 5 | Certificate authority | `ca\` | Root CA with ACME (step-ca): a fake Let's Encrypt. Without it nothing has working HTTPS. | Script written and tested on a test machine, not built on the range yet |
+| 6 | Connectivity checks | `connectivity-check\` | Fake the URLs that Windows, Android, Apple, Firefox and Linux probe, so machines do not report "No Internet". Also serves the well-known names. | Script written and tested on a test machine, not built on the range yet |
 | 7 | Registry (fake ARIN) | `registry\` | Whois on port 43, RDAP over HTTP and a web lookup page. Reads the registry file. | Not started |
 | 8 | GeoIP database | `geoip\` | MaxMind-format (MMDB) City and ASN files built from the registry file, RFC 1918 ranges included. | Not started |
-| 9 | Map tile server | `maps\` | TileServer GL with OpenStreetMap vector tiles. Serves vector and PNG tiles. | Not started |
+| 9 | Map tile server | `maps\` | TileServer GL with OpenStreetMap vector tiles. Serves vector and PNG tiles. | Built (Monaco test data), not yet at its GREY address |
 | 10 | Package mirrors | `mirrors\` | Kali/Debian apt, PyPI, container registry, Windows updates. The staging repo at .40 is the start. | Not started |
-| 11 | Domain registrar | `root-dns\registrar\` | Web portal where students register a domain and get a delegation. Runs on the two root servers. | Scripts written and tested on a test machine, not built on the range yet |
+| 11 | Domain registrar | `root-dns\registrar\` | Web portal where students register a domain and get a delegation. Runs on the two root servers. | Built on the range |
 | 12 | Mail and Git host | `mail\`, `git\` | Internet mail and Gitea, for phishing and code-leak scenarios. | Not started |
 | 13 | Update and intel feeds | `feeds\` | Suricata rules, ClamAV signatures, GeoIP update endpoint, IP reputation blocklist. | Not started |
 | 14 | Offline reference | `reference\` | Kiwix, so students have documentation in CLOSED mode. | Not started |
@@ -39,7 +39,7 @@ To put one asset on a VM, clone only its folder. See "Get one asset onto a VM" i
 
 Two jobs are part of other builds, not assets of their own:
 
-- **Well-known names.** Point `pool.ntp.org`, `time.windows.com` and similar at our own servers. Done in the DNS zones (items 2 to 4).
+- **Well-known names.** Point `pool.ntp.org`, `time.windows.com` and similar at our own servers. Built into item 6: `connectivity-check\names.conf` lists every real-world name the range answers, and the registrar hands those domains to the check server.
 - **Query logging.** Roots and the public resolver log queries to WHITECELL syslog (172.16.12.30) for scoring and forensics.
 
 ## Things to remember when building
