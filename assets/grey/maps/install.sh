@@ -121,6 +121,24 @@ builder_running() { systemctl is-active -q "$BUILDER" 2>/dev/null; }
 sha_ok() { [ -z "$2" ] || [ "$(sha256sum "$1" | cut -d' ' -f1)" = "$2" ]; }
 clean_line() { sed 's/\x1b\[[0-9;]*[A-Za-z]//g' | tr -d '\r' | cut -c1-150; }
 mins() { local s=$(( $(date +%s) - $1 )); printf '%dh%02dm' $(( s / 3600 )) $(( s % 3600 / 60 )); }
+health() { curl -s -o /dev/null -m 10 -w '%{http_code}' http://127.0.0.1/health || true; }
+
+# wait_server SECONDS: wait until TileServer GL answers /health with 200.
+# A just-restarted server answers 502 (not listening yet) and then 503 (opening
+# the tiles). The planet file is ~100 GB, so this can take a minute or more.
+wait_server() {
+  local limit="$1" waited=0 code
+  [ "$GO" -eq 1 ] || return 0
+  code="$(health)"
+  [ "$code" = "200" ] && return 0
+  echo "  waiting for the map server to start (up to $(( limit / 60 )) minutes)"
+  while [ "$waited" -lt "$limit" ]; do
+    sleep 5; waited=$(( waited + 5 )); code="$(health)"
+    [ "$code" = "200" ] && { echo "  map server is up after ${waited}s"; return 0; }
+    [ $(( waited % 30 )) -eq 0 ] && echo "  ...still starting after ${waited}s (last answer: $code)"
+  done
+  return 1
+}
 
 # Java heap and storage mode for Planetiler, from the VM's RAM.
 # Planet rules from Planetiler's PLANET.md: keep nodes in RAM only when RAM is
@@ -388,6 +406,7 @@ collect_tiles() {
     echo "  New tiles: clearing the nginx tile cache and restarting the server"
     run find "$MAPS_DIR/cache" -mindepth 1 -delete
     run systemctl restart "$SERVICE" nginx
+    wait_server 600 || true
   fi
   done_mark tiles
 }
@@ -578,14 +597,7 @@ EOF
   run systemctl restart "$SERVICE"
   run systemctl enable nginx
   run systemctl reload-or-restart nginx
-  if [ "$GO" -eq 1 ]; then
-    echo "  waiting for the server to open the tiles (up to 2 minutes)"
-    local _
-    for _ in $(seq 1 24); do
-      [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/health || true)" = "200" ] && break
-      sleep 5
-    done
-  fi
+  wait_server 600 || true
   done_mark service
 }
 
@@ -635,6 +647,20 @@ EOF
   echo "  Undo: move the files in $BACKUP_DIR/netplan back to /etc/netplan and delete 60-direwolf-grey.yaml."
 }
 
+# Shown when /health fails: is TileServer GL restarting, listening, and what did it log?
+tileserver_diagnose() {
+  local restarts
+  restarts="$(systemctl show -p NRestarts --value "$SERVICE" 2>/dev/null || echo "?")"
+  echo "    TileServer GL restarts since boot: $restarts (more than 0 means it keeps crashing)"
+  if ss -ltn 2>/dev/null | grep -q "127.0.0.1:$TILESERVER_PORT "; then
+    echo "    It is listening on 127.0.0.1:$TILESERVER_PORT."
+  else
+    echo "    Nothing is listening on 127.0.0.1:$TILESERVER_PORT yet."
+  fi
+  echo "    Its last log lines (full log: sudo journalctl -u $SERVICE -n 100 --no-pager):"
+  journalctl -u "$SERVICE" -n 15 --no-pager -o cat 2>/dev/null | clean_line | sed 's/^/      /' || true
+}
+
 # ---------------------------------------------------------------- check
 check() {
   say "Status"
@@ -662,8 +688,15 @@ check() {
   say "Live tests through nginx (http://127.0.0.1)"
   local t z x y f code
   t="$(mktemp -d)"
-  code="$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/health || true)"
-  [ "$code" = "200" ] && c_ok "/health 200" || c_bad "/health returned '$code' (503 = still starting)"
+  code="$(health)"
+  if [ "$code" != "200" ] && systemctl is-active -q "$SERVICE" 2>/dev/null; then
+    GO=1 wait_server 300 || true; code="$(health)"
+  fi
+  if [ "$code" = "200" ]; then c_ok "/health 200"
+  else
+    c_bad "/health returned '$code' (502 = TileServer GL is not answering, 503 = still opening the tiles)"
+    tileserver_diagnose
+  fi
   read -r z x y <<< "$(test_tile)"
   for f in "/0/0/0.png" "/5/9/12.png" "/$z/$x/$y.png" "/styles/$DEFAULT_STYLE/$z/$x/$y@2x.png" "/data/openmaptiles/$z/$x/$y.pbf"; do
     code="$(curl -s -o "$t/tile" -w '%{http_code}' "http://127.0.0.1$f" || true)"

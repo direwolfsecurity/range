@@ -328,6 +328,7 @@ and run `sudo bash install.sh --go`. The programs step notices the new version a
 | What you see | Why, and the fix |
 |---|---|
 | `/health` gives 503 | The server is still starting. Opening the 90 GB tile file takes a moment. Wait 30 seconds. |
+| `/health` or every tile gives 502 | nginx cannot reach TileServer GL yet. Right after a restart it takes a few seconds, longer with the planet. Run `sudo bash install.sh --check`: it now waits up to 5 minutes, and if it still fails it shows whether TileServer GL keeps restarting and its last log lines. |
 | Shapes but no labels | A font is missing. `sudo bash install.sh --check` names it. Re-run `--step assets --go` and `--step config --go` while on the internet. |
 | No icons | Sprite files missing. Same fix as above. |
 | Map is blank outside the test area | The test build is still in place. Do step 5. |
