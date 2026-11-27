@@ -79,6 +79,12 @@ Set in `range.ini` under `[profiles]`.
 
 `gencfg.py` refuses to write anything if two networks overlap or two VLAN tags collide.
 
+## Our own gear, as built
+
+[`devices/`](devices/) holds the cleaned-up configs from the classroom range's real Cisco gear: a 3750 core switch
+and two 2811 edge routers, with a port map and address plan for each, and a list of the security problems we fixed.
+Use them as a worked example of what `cisco_core_edge = yes` builds.
+
 ## Not here yet
 
 - **The range router for `shared` mode.** Something has to be `.254` on each pod's outside network. With

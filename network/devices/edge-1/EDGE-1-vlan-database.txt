@@ -1,0 +1,14 @@
+! EDGE-1 VLAN database. The NM-16ESW keeps VLANs in flash:vlan.dat, not in the config.
+! Type these at the EXEC prompt (EDGE-1#), BEFORE pasting EDGE-1.txt.
+!
+vlan database
+vlan 310 name TRANSIT-1
+vlan 201 name SEAT-201
+vlan 202 name SEAT-202
+vlan 203 name SEAT-203
+vlan 204 name SEAT-204
+vlan 205 name SEAT-205
+vlan 206 name SEAT-206
+vlan 207 name SEAT-207
+apply
+exit

@@ -1,0 +1,250 @@
+! CORE  --  Catalyst 3750v2-48PS, IOS 12.2(55)SE
+! Dire Wolf Security range  |  as built in the classroom range  |  GPL-3.0
+! Placeholders to fill before loading: <ENABLE_SECRET> <ADMIN_SECRET> <INSTRUCTOR_IP>
+! Load from the CONSOLE. See README.md in this folder for the steps.
+!
+hostname CORE
+!
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+!
+enable secret <ENABLE_SECRET>
+username admin privilege 15 secret <ADMIN_SECRET>
+no aaa new-model
+!
+switch 1 provision ws-c3750v2-48ps
+system mtu routing 1500
+no vstack
+vtp mode transparent
+ip routing
+no ip source-route
+no ip domain-lookup
+ip domain-name range.lab
+no ip http server
+no ip http secure-server
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+!
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+!
+! ---- VLANs ----
+vlan 110
+ name GREY
+vlan 120
+ name WHITECELL
+vlan 130
+ name REDCELL
+vlan 310
+ name TRANSIT-1
+vlan 320
+ name TRANSIT-2
+vlan 330
+ name UPLINK
+vlan 340
+ name CITY
+vlan 410
+ name TARGETS-A
+vlan 420
+ name TARGETS-B
+vlan 999
+ name PARKED
+!
+! ---- DHCP for the city (hands out .100 - .150) ----
+ip dhcp excluded-address 192.168.34.1 192.168.34.99
+ip dhcp excluded-address 192.168.34.151 192.168.34.254
+ip dhcp pool CITY
+ network 192.168.34.0 255.255.255.0
+ default-router 192.168.34.254
+ dns-server 172.16.11.10
+!
+! ---- Access ports ----
+interface range FastEthernet1/0/1 - 8
+ description GREY physical assets
+ switchport mode access
+ switchport access vlan 110
+ spanning-tree portfast
+interface range FastEthernet1/0/9 - 12
+ description WHITECELL
+ switchport mode access
+ switchport access vlan 120
+ spanning-tree portfast
+interface range FastEthernet1/0/13 - 20
+ description REDCELL
+ switchport mode access
+ switchport access vlan 130
+ spanning-tree portfast
+interface range FastEthernet1/0/21 - 28
+ description TARGETS-A physical
+ switchport mode access
+ switchport access vlan 410
+ spanning-tree portfast
+interface FastEthernet1/0/36
+ description CITY wireless access point
+ switchport mode access
+ switchport access vlan 340
+ spanning-tree portfast
+interface range FastEthernet1/0/37 - 40
+ description CITY wired
+ switchport mode access
+ switchport access vlan 340
+ spanning-tree portfast
+!
+! ---- The one cable to the outside world (red). CLOSED mode shuts it. ----
+interface FastEthernet1/0/30
+ description UPLINK to the outside gateway -- AIR-GAP CABLE (red)
+ switchport mode access
+ switchport access vlan 330
+!
+! ---- Edge routers ----
+interface FastEthernet1/0/47
+ description EDGE-1 Fa1/0
+ switchport mode access
+ switchport access vlan 310
+interface FastEthernet1/0/48
+ description EDGE-2 Fa1/0
+ switchport mode access
+ switchport access vlan 320
+!
+! ---- Trunk to the grey/white Proxmox host ----
+interface GigabitEthernet1/0/1
+ description trunk to the grey/white Proxmox host
+ switchport trunk encapsulation dot1q
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 110,120,130,340,410,420
+ switchport mode trunk
+ spanning-tree portfast trunk
+interface GigabitEthernet1/0/2
+ description reserved: 2nd link to the Proxmox host
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+!
+! ---- Unused ports: parked and shut ----
+interface range FastEthernet1/0/29 , FastEthernet1/0/31 - 35 , FastEthernet1/0/41 - 46
+ description unused
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+interface range GigabitEthernet1/0/3 - 4
+ description unused
+ switchport mode access
+ switchport access vlan 999
+ shutdown
+!
+! ---- Gateways (every shared network's gateway is .254) ----
+interface Vlan1
+ no ip address
+ shutdown
+interface Vlan110
+ description GREY
+ ip address 172.16.11.254 255.255.255.0
+ no ip redirects
+interface Vlan120
+ description WHITECELL
+ ip address 172.16.12.254 255.255.255.0
+ ip access-group WHITE-PROTECT out
+ no ip redirects
+interface Vlan130
+ description REDCELL
+ ip address 172.16.13.254 255.255.255.0
+ no ip redirects
+interface Vlan310
+ description TRANSIT-1 to EDGE-1
+ ip address 192.168.31.254 255.255.255.0
+ no ip redirects
+interface Vlan320
+ description TRANSIT-2 to EDGE-2
+ ip address 192.168.32.254 255.255.255.0
+ no ip redirects
+interface Vlan330
+ description UPLINK
+ ip address 192.168.33.254 255.255.255.0
+ no ip redirects
+interface Vlan340
+ description CITY
+ ip address 192.168.34.254 255.255.255.0
+ no ip redirects
+interface Vlan410
+ description TARGETS-A
+ ip address 192.168.200.254 255.255.255.0
+ no ip redirects
+interface Vlan420
+ description TARGETS-B
+ ip address 192.168.210.254 255.255.255.0
+ no ip redirects
+!
+! ---- Routing: OSPF to the edges, default route out the uplink ----
+router ospf 1
+ router-id 192.168.33.254
+ log-adjacency-changes
+ passive-interface default
+ no passive-interface Vlan310
+ no passive-interface Vlan320
+ network 172.16.0.0 0.0.255.255 area 0
+ network 192.168.0.0 0.0.255.255 area 0
+ default-information originate
+!
+ip classless
+ip route 0.0.0.0 0.0.0.0 192.168.33.1 name OUTSIDE-GW
+! Optional: a route to your own management network, if it is not behind the default route.
+! ip route <MGMT_NET> <MGMT_MASK> 192.168.33.1
+!
+! ---- Who may SSH to this switch ----
+ip access-list standard MGMT-ONLY
+ remark who may SSH to this device
+ permit host <INSTRUCTOR_IP>
+ permit 172.16.12.0 0.0.0.255
+ deny   any log
+!
+! ---- RED TEAM mode filters (not applied here; see ../../README.md, modes) ----
+ip access-list extended UPLINK-IN-REDTEAM
+ remark from the outside gateway: only the red-team VPN pool and the instructor
+ permit ip 10.250.250.0 0.0.0.255 any
+ permit ip host <INSTRUCTOR_IP> any
+ deny   ip any any log
+ip access-list extended UPLINK-OUT-REDTEAM
+ remark toward the outside gateway: only the red-team VPN pool and the instructor
+ permit ip any 10.250.250.0 0.0.0.255
+ permit ip any host <INSTRUCTOR_IP>
+ deny   ip any any log
+!
+! ---- Protect the white cell (scoring, syslog) from everyone else ----
+ip access-list extended WHITE-PROTECT
+ remark replies to sessions started from WHITECELL
+ permit tcp any 172.16.12.0 0.0.0.255 established
+ permit udp any eq domain 172.16.12.0 0.0.0.255
+ permit udp any eq ntp 172.16.12.0 0.0.0.255
+ permit icmp any 172.16.12.0 0.0.0.255 echo-reply
+ permit icmp any 172.16.12.0 0.0.0.255 unreachable
+ permit icmp any 172.16.12.0 0.0.0.255 time-exceeded
+ remark scoreboard web for everyone, syslog from gear
+ permit tcp any host 172.16.12.20 eq www
+ permit tcp any host 172.16.12.20 eq 443
+ permit udp any host 172.16.12.30 eq syslog
+ remark instructor
+ permit ip host <INSTRUCTOR_IP> 172.16.12.0 0.0.0.255
+ deny   ip any any log
+!
+! ---- Logs and time ----
+logging trap informational
+logging 172.16.12.30
+ntp server 172.16.11.123
+!
+banner motd ^
+  DIRE WOLF SECURITY range device. Authorized use only.
+^
+!
+line con 0
+ exec-timeout 15 0
+ logging synchronous
+ login local
+line vty 0 15
+ access-class MGMT-ONLY in
+ exec-timeout 15 0
+ login local
+ transport input ssh
+!
+end
