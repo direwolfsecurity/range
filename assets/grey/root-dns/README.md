@@ -90,6 +90,15 @@ sudo bash set-root-hints-ubuntu.sh --root1-ip 10.0.0.10 --root2-ip 10.0.0.11
 sudo bash set-root-hints-ubuntu.sh --root1-ip 10.0.0.10 --root2-ip 10.0.0.11 --install bind9   # no resolver yet
 ```
 
+A resolver for the whole range (the range's "8.8.8.8") must also answer other machines. Add `--serve` with the networks it may answer.
+Without it, BIND and Unbound only answer the machine they run on.
+
+```bash
+sudo bash set-root-hints-ubuntu.sh --root1-ip 10.0.0.10 --root2-ip 10.0.0.11 --install unbound --serve 172.16.0.0/12,10.0.0.0/8,192.168.0.0/16
+```
+
+Only list range networks. An open resolver on a network you do not control can be abused.
+
 Windows DNS server, in an Administrator PowerShell:
 
 ```powershell
@@ -118,6 +127,7 @@ The registrar admin page also shows each zone's serial on both roots, with "in s
 | Secondary is missing a registrar TLD | `sudo rndc retransfer catz.invalid` on the secondary. |
 | Registrar says "publishing to DNS failed" | Run `sudo registrar-apply` on the primary and read the error. It rolls back bad changes. |
 | Registrar stopped working after re-running step 1 | Step 1 rewrites BIND's settings. Run step 3 again on that VM. |
+| Resolver answers itself but other machines get REFUSED or time out | Run step 4 again with `--serve` and their networks. |
 | Resolver gives SERVFAIL for everything | DNSSEC checking is still on, or forwarders are set. Re-run step 4 (`-ClearForwarders` on Windows). |
 | Unbound resolver gets no answers when testing on one machine | Unbound will not ask servers on 127.x by default. Use real addresses. |
 
@@ -127,7 +137,7 @@ Logs: `/var/log/named/named.log` and `query.log` (every query, useful for scorin
 
 Tested 2026-11-27 on Ubuntu 24.04 (BIND 9.18, PHP 8.3, Unbound 1.19), with both roots and the resolver on one test machine:
 primary and secondary roots, `add-tld.sh`, the registrar on both roots (web sign-up, whois, admin page, command line, catalog sync
-of a new TLD to the secondary), and an Unbound resolver resolving `www.nic.lab` through the roots.
+of a new TLD to the secondary), and an Unbound resolver resolving `www.nic.lab` through the roots. `--serve` (added the same day) tested on Unbound (answers listed networks, refuses others) and checked with `named-checkconf` on BIND.
 Not yet tested: on two separate VMs on GREY, a BIND resolver, and the Windows script.
 
 Not built yet (see the grey cell list): query logs to WHITECELL syslog, reverse (PTR) zones,
