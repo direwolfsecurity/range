@@ -4,7 +4,7 @@ Grey assets are the fake internet. Neither team controls them; either team may u
 They live on VLAN 110 (GREY, 172.16.11.0/24), mostly on pve-r05.
 
 This list was agreed on 2026-11-13. It is in rough build order. The Status column says what is built.
-Addresses in use or proposed on GREY: resolver 172.16.11.10, roots 172.16.11.11 and .12, CA .20 (proposed), connectivity check .30 (proposed), maps .60, MQTT .83, NTP .123.
+Addresses in use or proposed on GREY: resolver 172.16.11.10, roots 172.16.11.11 and .12, CA .20, connectivity check .30, maps .60, MQTT .83, NTP .123.
 
 ## The rule that ties it together
 

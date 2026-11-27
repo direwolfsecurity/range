@@ -24,7 +24,7 @@ cd assets/grey/ca
 | Item | Notes |
 |---|---|
 | Ubuntu 24.04 | A VM or a Proxmox container (see below). 1 CPU, 1 GB RAM, 8 GB disk is plenty. |
-| Address | Proposed: **172.16.11.20** on GREY (VLAN 110). Not final until `network\registry.csv` exists. |
+| Address | **172.16.11.20** on GREY (VLAN 110). Not final until `network\registry.csv` exists. |
 | DNS name | **`ca.lab`**, registered on the grey registrar (step 3). |
 | Range DNS working | The CA checks each ACME request by looking the name up on the range resolver (`RESOLVER` in `ca.conf`, 172.16.11.10). |
 | Package access while installing | Smallstep's apt repository needs internet. For a closed range, download `step-cli_*.deb` and `step-ca_*.deb` from the Smallstep releases on GitHub beforehand, put them in a folder and set `STEP_PACKAGES` in `ca.conf` to that folder. |

@@ -50,7 +50,7 @@ in `names.conf` gets "no such name". That is how the range's pretend internet wo
 | Item | Notes |
 |---|---|
 | Ubuntu 24.04 | A VM or a Proxmox container (see below). 1 CPU, 512 MB RAM, 8 GB disk is plenty. |
-| Address | Proposed: **172.16.11.30** on GREY (VLAN 110). Not final until `network\registry.csv` exists. |
+| Address | **172.16.11.30** on GREY (VLAN 110). Not final until `network\registry.csv` exists. |
 | DNS name | **`check.lab`**, registered on the grey registrar (step 3). |
 | The root DNS servers and registrar | `../root-dns/`, with the registrar selling `com` and `org` (the default). |
 | Package access while installing | BIND and nginx (and certbot for HTTPS). A local mirror works. |
