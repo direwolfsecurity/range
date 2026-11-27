@@ -193,7 +193,10 @@ server:
 EOF
   if [[ ${#SERVE_NETS[@]} -gt 0 ]]; then
     # Answer the range, not only this machine.
-    { echo "    interface: 0.0.0.0"
+    # Listen on each of this machine's IPv4 addresses, not 0.0.0.0: on Ubuntu,
+    # systemd-resolved holds 127.0.0.53:53 and a 0.0.0.0 listener would fail.
+    # Re-run this script if the IP address changes.
+    { ip -o -4 addr show | awk '{print $4}' | cut -d/ -f1 | grep -vx '127.0.0.53' | sed 's/^/    interface: /'
       echo "    access-control: 127.0.0.0/8 allow"
       for n in "${SERVE_NETS[@]}"; do echo "    access-control: $n allow"; done; } >> /etc/unbound/unbound.conf.d/zz-range-root.conf
     log "  answers: localhost and ${SERVE_NETS[*]}"

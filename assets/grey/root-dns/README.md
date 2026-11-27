@@ -11,10 +11,21 @@ License: CC BY-SA 4.0 for this guide, GPL-3.0 for the scripts. Dire Wolf Securit
 
 | Item | Notes |
 |---|---|
-| Two Ubuntu Server 24.04 VMs | Small is fine: 1 CPU, 1 GB RAM, 10 GB disk each. One is the primary, one the secondary. Putting the secondary on a Pi or another Proxmox host keeps DNS up when one host reboots. |
-| A static IP on each | On GREY (172.16.11.0/24) on our range. Set it with netplan before you start. |
+| Two Ubuntu 24.04 machines | VMs or Proxmox containers (see below). Small is fine: 1 CPU, 1 GB RAM, 10 GB disk each. One is the primary, one the secondary. Putting the secondary on a Pi or another Proxmox host keeps DNS up when one host reboots. |
+| A static IP on each | On GREY (172.16.11.0/24) on our range. Set it before you start: netplan on a VM, the container's Network tab on Proxmox. |
 | Package access while installing | BIND, and for the registrar Apache and PHP. A local mirror works. Not needed afterwards. |
 | The scripts on each VM | `git clone --depth 1 --filter=blob:none --sparse https://github.com/direwolfsecurity/range.git`, then `cd range`, `git sparse-checkout set assets/grey/root-dns` and `cd assets/grey/root-dns`. This gets only this folder (the registrar is inside it). |
+
+## Proxmox containers (LXC) instead of VMs
+
+DNS is light work, so unprivileged containers from the Ubuntu 24.04 template are a good fit. Differences from a VM:
+
+- **IP address:** set it in Proxmox (container > Network > eth0: static IPv4 like `172.16.11.11/24`, gateway `172.16.11.254`). Proxmox writes the network config inside the container. Do not use netplan.
+- **DNS server:** set it in Proxmox too (container > DNS). Proxmox rewrites `/etc/resolv.conf` at every start. Use a working DNS server while installing, then `172.16.11.10` once the range resolver is up.
+- **The template is small.** Log in as root and install git and sudo first: `apt update && apt install -y git sudo`. The scripts install everything else they need.
+- **Port 53:** Ubuntu's own `systemd-resolved` holds 127.0.0.53. BIND does not mind. The resolver script makes Unbound listen on the container's real addresses instead of 0.0.0.0, so it does not clash. If you change the container's IP, run step 4 again.
+- **AppArmor:** `setup-root-dns.sh` tries to adjust BIND's AppArmor profile. Inside an unprivileged container that fails quietly, which is fine.
+- Start each container on boot (Options > Start at boot), so DNS comes back by itself after pve5 restarts.
 
 ## The scripts
 

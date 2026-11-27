@@ -69,6 +69,8 @@ log "Role: $ROLE"
 # =============================================================================
 if [[ "$ROLE" == secondary ]]; then
   OPT=/etc/bind/named.conf.options
+  # Minimal images (Proxmox containers) may not have python3, used just below.
+  command -v python3 >/dev/null || { apt-get update -y >/dev/null || true; DEBIAN_FRONTEND=noninteractive apt-get install -y python3 >/dev/null || die "Could not install python3."; }
   mkdir -p /var/cache/bind/catz; chown bind:bind /var/cache/bind/catz
   if ! grep -q 'catalog-zones' "$OPT"; then
     cp "$OPT" "$OPT.bak-$(date +%s)"
