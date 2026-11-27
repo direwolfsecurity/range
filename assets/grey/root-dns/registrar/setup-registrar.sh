@@ -184,7 +184,8 @@ log "Publishing zones..."
 
 # ---- Apache ------------------------------------------------------------------
 if [[ -z "$ADMIN_PASS" ]]; then
-  ADMIN_PASS=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 14)
+  # "|| true": head stops tr early on purpose; with pipefail that counts as a failure.
+  ADMIN_PASS=$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 14 || true)
   GENERATED=1
 fi
 htpasswd -cbB /etc/registrar/htpasswd "$ADMIN_USER" "$ADMIN_PASS" >/dev/null
