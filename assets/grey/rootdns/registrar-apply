@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""
+registrar-apply — rebuild the registrar-hosted TLD zones from the registrar DB
+and reload BIND. Installed to /usr/local/sbin/registrar-apply on the ROOT PRIMARY.
+
+The web app (www-data) may run ONLY this program via sudo (no arguments are
+trusted — everything is re-validated here). Safe to run by hand any time:
+
+    sudo registrar-apply            # apply pending changes
+    sudo registrar-apply --force    # rewrite + reload even if nothing changed
+
+Generates:
+  /etc/bind/zones/registrar/db.<tld>    one zone per hosted TLD
+  /etc/bind/zones/registrar/db.catalog  catalog zone (secondary auto-provisions TLDs)
+  /etc/bind/zones/root.registrar        root delegations for hosted TLDs
+  /etc/bind/named.conf.registrar        zone statements
+"""
+import configparser, fcntl, grp, hashlib, ipaddress, json, os, re, sqlite3, subprocess, sys, time
+
+INI        = '/etc/registrar/registrar.ini'
+STATE      = '/var/lib/registrar-apply/state.json'
+LOCK       = '/run/registrar-apply.lock'
+ZDIR       = '/etc/bind/zones/registrar'
+ROOT_ZONE  = '/etc/bind/zones/db.root'
+ROOT_INC   = '/etc/bind/zones/root.registrar'
+ROOT_DELEG = '/etc/bind/zones/root.delegations'
+NAMED_INC  = '/etc/bind/named.conf.registrar'
+NAMED_LOCAL= '/etc/bind/named.conf.local'
+LABEL = re.compile(r'^(?!-)[a-z0-9-]{1,63}(?<!-)$')
+
+warnings = []
+def warn(m): warnings.append(m)
+
+def fq(n): return n.strip().lower().rstrip('.') + '.'
+def valid_host(h):
+    h = (h or '').strip().lower().rstrip('.'); parts = h.split('.')
+    return 0 < len(h) <= 253 and len(parts) >= 2 and all(LABEL.match(p) for p in parts)
+def ipver(s):
+    try: return ipaddress.ip_address((s or '').strip()).version
+    except ValueError: return None
+def rtype(ip): return 'AAAA' if ipver(ip) == 6 else 'A'
+def under(name, parent): return name == parent or name.endswith('.' + parent)
+def read(p):
+    try:
+        with open(p) as f: return f.read()
+    except FileNotFoundError: return None
+
+def next_serial(old):
+    today = int(time.strftime('%Y%m%d')) * 100 + 1
+    return max((old or 0) + 1, today)
+
+def main():
+    force = '--force' in sys.argv
+    if os.geteuid() != 0: sys.exit('registrar-apply: must run as root')
+    os.makedirs(os.path.dirname(STATE), mode=0o700, exist_ok=True)
+    os.makedirs(ZDIR, exist_ok=True)
+    lockf = open(LOCK, 'w'); fcntl.flock(lockf, fcntl.LOCK_EX)
+
+    cp = configparser.ConfigParser(); cp.read(INI)
+    if 'registrar' not in cp: sys.exit(f'registrar-apply: missing {INI}')
+    cfg = {k: v.strip().strip('"\'') for k, v in cp['registrar'].items()}   # PHP-style quoted INI
+    roots = [(fq(cfg['root1_name']), cfg['root1_ip'].strip()), (fq(cfg['root2_name']), cfg['root2_ip'].strip())]
+    sec_ip = cfg['root2_ip'].strip()
+    catz = fq(cfg.get('catalog_zone', 'catz.invalid'))
+    hostmaster = fq(cfg.get('hostmaster', 'hostmaster.root-servers.net'))
+    dbpath = cfg.get('db_path', '/var/lib/registrar/registrar.db')
+
+    state = json.loads(read(STATE) or '{}')
+    db = sqlite3.connect(f'file:{dbpath}?mode=ro', uri=True)
+    db.row_factory = sqlite3.Row
+
+    # TLDs delegated elsewhere via add-tld.sh must not also be hosted here
+    external = set()
+    for line in (read(ROOT_DELEG) or '').splitlines():
+        m = re.match(r'^(\S+)\s+\d+\s+IN\s+NS\s', line, re.I)
+        if m: external.add(fq(m.group(1)))
+
+    tlds = []
+    for r in db.execute('SELECT name FROM tlds ORDER BY name'):
+        t = r['name'].strip().lower()
+        if not LABEL.match(t): warn(f'skipping invalid TLD {t!r}'); continue
+        if fq(t) in external: warn(f'TLD {t} is delegated in root.delegations — not hosting it here'); continue
+        tlds.append(t)
+
+    files = {}            # path -> new content
+    def zone_text(name, body_lines, header_fn):
+        body = '\n'.join(body_lines) + '\n'
+        h = hashlib.sha256(body.encode()).hexdigest()
+        st = state.get(name, {})
+        serial = st.get('serial', 0)
+        if st.get('hash') != h or force or not serial:
+            serial = next_serial(serial)
+        state[name] = {'hash': h, 'serial': serial}
+        return header_fn(serial) + body
+
+    # ---- TLD zones ----------------------------------------------------------
+    for t in tlds:
+        z = fq(t); lines = []; seen = set()
+        def add(l):
+            if l not in seen: seen.add(l); lines.append(l)
+        # Root server names living under this TLD (e.g. *.root-servers.net) must
+        # resolve authoritatively from the TLD zone too.
+        for rn, rip in roots:
+            if under(rn, z) and rn != z:
+                add(f'{rn:<40} 86400 IN {rtype(rip):<4} {rip}')
+        rows = db.execute("SELECT * FROM domains WHERE tld=? AND status='active' ORDER BY label", (t,)).fetchall()
+        n = 0
+        for d in rows:
+            label = (d['label'] or '').lower()
+            if not LABEL.match(label): warn(f'skip invalid label {label!r}.{t}'); continue
+            dom = f'{label}.{z}'
+            if any(under(rn, dom) for rn, _ in roots): warn(f'skip {dom}: contains a root server name'); continue
+            if d['mode'] == 'ns':
+                nss = [(d['ns1'], d['ns1_ip']), (d['ns2'], d['ns2_ip'])]
+                nss = [(fq(h), ip) for h, ip in nss if h and valid_host(h)]
+                if not nss: warn(f'skip {dom}: no valid nameservers'); continue
+                for h, ip in nss:
+                    add(f'{dom:<40} 3600  IN NS   {h}')
+                for h, ip in nss:
+                    if under(h, dom):
+                        if ipver(ip): add(f'{h:<40} 3600  IN {rtype(ip):<4} {ip.strip()}')
+                        else: warn(f'{dom}: in-domain NS {h} has no valid glue IP')
+            elif d['mode'] == 'a':
+                ip = (d['a_ip'] or '').strip()
+                if not ipver(ip): warn(f'skip {dom}: bad IP {ip!r}'); continue
+                add(f'{dom:<40} 3600  IN {rtype(ip):<4} {ip}')
+                add(f'{"www." + dom:<40} 3600  IN CNAME {dom}')
+            else:
+                warn(f'skip {dom}: unknown mode'); continue
+            n += 1
+        hdr = lambda s, z=z, n=n: (
+            f'; {z} — generated by registrar-apply {time.strftime("%F %T")}. DO NOT EDIT.\n'
+            f'; {n} active domain(s)\n$TTL 3600\n$ORIGIN {z}\n'
+            f'@ 86400 IN SOA {roots[0][0]} {hostmaster} ( {s} 1800 900 604800 300 )\n'
+            + ''.join(f'@ 86400 IN NS {rn}\n' for rn, _ in roots))
+        files[f'{ZDIR}/db.{t}'] = zone_text(t, lines, hdr)
+
+    # ---- Catalog zone (secondary picks up TLD list from this) ---------------
+    cat_lines = ['version 0 IN TXT "2"']
+    for t in tlds:
+        cat_lines.append(f'{hashlib.sha1(t.encode()).hexdigest()[:16]}.zones 0 IN PTR {fq(t)}')
+    files[f'{ZDIR}/db.catalog'] = zone_text('__catalog__', cat_lines, lambda s: (
+        f'; catalog zone — generated by registrar-apply. DO NOT EDIT.\n$TTL 0\n$ORIGIN {catz}\n'
+        f'@ IN SOA invalid. invalid. ( {s} 3600 600 2147483646 0 )\n@ IN NS invalid.\n'))
+
+    # ---- named.conf.registrar ------------------------------------------------
+    xfr = f'allow-transfer {{ {sec_ip}; }}; also-notify {{ {sec_ip}; }}; notify explicit;'
+    conf = ['// generated by registrar-apply — DO NOT EDIT',
+            f'zone "{catz.rstrip(".")}" {{ type primary; file "{ZDIR}/db.catalog"; {xfr} }};']
+    for t in tlds:
+        conf.append(f'zone "{t}" {{ type primary; file "{ZDIR}/db.{t}"; check-integrity no; {xfr} }};')
+    files[NAMED_INC] = '\n'.join(conf) + '\n'
+
+    # ---- Root delegations for hosted TLDs ----------------------------------
+    root_inc = '; hosted TLDs — generated by registrar-apply. DO NOT EDIT.\n' + ''.join(
+        f'{t + ".":<30} 172800 IN NS   {rn}\n' for t in tlds for rn, _ in roots)
+    files[ROOT_INC] = root_inc
+    root = read(ROOT_ZONE)
+    if root is None: sys.exit(f'registrar-apply: {ROOT_ZONE} missing — run setup-root-dns.sh first')
+    if f'$INCLUDE {ROOT_INC}' not in root:
+        root += f'\n; ---- Registrar-hosted TLDs ----\n$INCLUDE {ROOT_INC}\n'
+    if read(ROOT_INC) != root_inc or force or f'$INCLUDE {ROOT_INC}' not in read(ROOT_ZONE):
+        m = re.search(r'^(\s*)(\d+)(\s*;\s*serial)', root, re.M)
+        if not m: sys.exit('registrar-apply: cannot find "; serial" line in db.root')
+        new = next_serial(int(m.group(2)))
+        root = root[:m.start(2)] + str(new) + root[m.end(2):]
+    files[ROOT_ZONE] = root
+
+    nl = read(NAMED_LOCAL) or ''
+    if NAMED_INC not in nl:
+        files[NAMED_LOCAL] = nl + f'\ninclude "{NAMED_INC}";\n'
+
+    # ---- Write, check, roll back on failure ---------------------------------
+    changed = {p: c for p, c in files.items() if read(p) != c}
+    orphans = [os.path.join(ZDIR, f) for f in os.listdir(ZDIR)
+               if f.startswith('db.') and os.path.join(ZDIR, f) not in files]
+    if not changed and not orphans and not force:
+        print('registrar-apply: no changes'); print_warnings(); return 0
+
+    backup = {p: read(p) for p in changed}
+    bind_gid = grp.getgrnam('bind').gr_gid
+    for p, c in changed.items():
+        tmp = p + '.tmp'
+        with open(tmp, 'w') as f: f.write(c)
+        os.chown(tmp, 0, bind_gid); os.chmod(tmp, 0o644); os.replace(tmp, p)
+
+    errors = []
+    def check(cmd):
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode != 0: errors.append(' '.join(cmd) + '\n' + r.stdout + r.stderr)
+    check(['named-checkconf', '/etc/bind/named.conf'])
+    check(['named-checkzone', '-q', '.', ROOT_ZONE])
+    check(['named-checkzone', '-q', catz, f'{ZDIR}/db.catalog'])
+    for t in tlds: check(['named-checkzone', '-q', '-i', 'none', t, f'{ZDIR}/db.{t}'])
+
+    if errors:
+        for p, old in backup.items():
+            if old is None: os.remove(p)
+            else:
+                with open(p, 'w') as f: f.write(old)
+        print('registrar-apply: VALIDATION FAILED — changes rolled back', file=sys.stderr)
+        for e in errors: print(e, file=sys.stderr)
+        return 1
+
+    r = subprocess.run(['rndc', 'reload'], capture_output=True, text=True)
+    if r.returncode != 0:
+        print('registrar-apply: rndc reload failed:\n' + r.stdout + r.stderr, file=sys.stderr); return 1
+    for o in orphans:
+        os.remove(o); jnl = o + '.jnl'
+        if os.path.exists(jnl): os.remove(jnl)
+    with open(STATE + '.tmp', 'w') as f: json.dump(state, f, indent=1)
+    os.replace(STATE + '.tmp', STATE)
+
+    print(f'registrar-apply: OK — {len(tlds)} TLD(s) hosted: {", ".join(tlds) or "none"}')
+    for p in sorted(changed): print(f'  updated {p}')
+    for o in orphans: print(f'  removed {o}')
+    print_warnings()
+    return 0
+
+def print_warnings():
+    for w in warnings: print(f'  warning: {w}')
+
+if __name__ == '__main__':
+    sys.exit(main())
