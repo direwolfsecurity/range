@@ -129,9 +129,16 @@ The 1.2 TB build disk is only needed for one day.
 On the VM (it needs the internet for this):
 
 ```
-git clone https://github.com/direwolfsecurity/range.git
-cd range/assets/grey/maps
+git clone --depth 1 --filter=blob:none --sparse https://github.com/direwolfsecurity/range.git
+cd range
+git sparse-checkout set assets/grey/maps
+cd assets/grey/maps
 ```
+
+This downloads only the maps folder (plus the license and README files above it), not the whole range repo.
+Keep the folder on the VM: `install.sh` uses it again for re-runs and the status check. To get updates later: `cd ~/range && git pull`.
+
+Already cloned the whole repo? Trim it in place: `cd ~/range && git sparse-checkout set assets/grey/maps`.
 
 No internet on the VM yet? Copy the folder from a PC instead: `scp -r maps <user>@<vm-ip>:~/` and then `cd ~/maps`.
 
