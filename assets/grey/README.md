@@ -4,7 +4,7 @@ Grey assets are the fake internet. Neither team controls them; either team may u
 They live on VLAN 110 (GREY, 172.16.11.0/24), mostly on pve-r05.
 
 This list was agreed on 2026-11-13. It is in rough build order. Nothing below is built yet except where noted.
-No addresses are assigned yet except the planned public resolver (172.16.11.10) and the proposed NTP address (172.16.11.123).
+No addresses are assigned yet except the planned public resolver (172.16.11.10) and the proposed NTP address (172.16.11.123) and MQTT address (172.16.11.83).
 
 ## The rule that ties it together
 
@@ -35,6 +35,7 @@ To put one asset on a VM, clone only its folder. See "Get one asset onto a VM" i
 | 12 | Mail and Git host | `mail\`, `git\` | Internet mail and Gitea, for phishing and code-leak scenarios. | Not started |
 | 13 | Update and intel feeds | `feeds\` | Suricata rules, ClamAV signatures, GeoIP update endpoint, IP reputation blocklist. | Not started |
 | 14 | Offline reference | `reference\` | Kiwix, so students have documentation in CLOSED mode. | Not started |
+| 15 | MQTT broker | `mqtt\` | Mosquitto for Cyber City tiles, at `mqtt.lab`. Open mode for attack labs, secure mode (logins, per-tile rights, optional TLS) for defend labs. | Script written and tested on a test machine, not built on the range yet |
 
 Two jobs are part of other builds, not assets of their own:
 
