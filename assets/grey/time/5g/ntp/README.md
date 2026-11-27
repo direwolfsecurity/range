@@ -34,8 +34,10 @@ To see which module you have: `sudo python3 /opt/gpsdash/at.py /dev/ttyUSB2 'ATI
 On the Pi:
 
 ```bash
-git clone <this repo>
-cd <repo>/assets/grey/time/5g/ntp
+git clone --depth 1 --filter=blob:none --sparse https://github.com/direwolfsecurity/range.git
+cd range
+git sparse-checkout set assets/grey/time/5g/ntp
+cd assets/grey/time/5g/ntp
 sudo bash install.sh          # test mode: lists what it will do, changes nothing
 sudo bash install.sh --go     # does it, then prints a status check
 ```

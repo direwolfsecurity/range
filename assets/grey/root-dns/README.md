@@ -14,7 +14,7 @@ License: CC BY-SA 4.0 for this guide, GPL-3.0 for the scripts. Dire Wolf Securit
 | Two Ubuntu Server 24.04 VMs | Small is fine: 1 CPU, 1 GB RAM, 10 GB disk each. One is the primary, one the secondary. Putting the secondary on a Pi or another Proxmox host keeps DNS up when one host reboots. |
 | A static IP on each | On GREY (172.16.11.0/24) on our range. Set it with netplan before you start. |
 | Package access while installing | BIND, and for the registrar Apache and PHP. A local mirror works. Not needed afterwards. |
-| The scripts on each VM | `git clone https://github.com/direwolfsecurity/range.git` then `cd range/assets/grey/root-dns`. |
+| The scripts on each VM | `git clone --depth 1 --filter=blob:none --sparse https://github.com/direwolfsecurity/range.git`, then `cd range`, `git sparse-checkout set assets/grey/root-dns` and `cd assets/grey/root-dns`. This gets only this folder (the registrar is inside it). |
 
 ## The scripts
 

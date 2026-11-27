@@ -15,6 +15,21 @@ Build a cyber range on Proxmox: a small fake internet, pods to defend, attackers
 
 Each asset folder has a `README.md`, `config/`, `build/` and `docs/`. See `assets/README.md`.
 
+## Get one asset onto a VM
+
+Each VM needs only its own asset folder, not the whole repo. Clone just that folder:
+
+```
+git clone --depth 1 --filter=blob:none --sparse https://github.com/direwolfsecurity/range.git
+cd range
+git sparse-checkout set <asset path>
+cd <asset path>
+```
+
+For example, `<asset path>` is `assets/grey/maps` on the map server. You also get the license and README files above it,
+which are small. Keep the folder on the VM after the build, and run `git pull` inside `range` to get updates.
+Already cloned the whole repo? Run `git sparse-checkout set <asset path>` inside `range` to trim it.
+
 **Status:** early. The grey cell is built first. Check each asset's README for what works.
 
 ## Ground rules

@@ -21,6 +21,22 @@ Create the folder when the build starts, not before.
 | `build\` | Build and install scripts. Scripts run in test mode unless given `-Go`. |
 | `docs\` | Diagrams, notes and anything longer than the README. |
 
+## Every asset can be cloned on its own
+
+Each VM gets only its own folder (see "Get one asset onto a VM" in the top `README.md`). So every new asset must:
+
+- Work with only its own folder present. Scripts find their files with
+  `HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"` and never reach into a sibling asset or the repo root.
+  If two assets need the same file, copy it into both.
+- Start its README build steps with the one-folder clone, using its own path:
+
+```
+git clone --depth 1 --filter=blob:none --sparse https://github.com/direwolfsecurity/range.git
+cd range
+git sparse-checkout set assets/<cell>/<asset>
+cd assets/<cell>/<asset>
+```
+
 ## Rules
 
 - VM disk images do not go here. They go in `..\vms\` (not published).

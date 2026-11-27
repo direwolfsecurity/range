@@ -14,6 +14,8 @@ One row per network: subnet, owner organization, fake ASN, country, city, latitu
 Generators read that file and write the DNS zones (forward and reverse), the GeoIP database and the registry (whois) records.
 A student who looks up an IP then gets the same answer from all three.
 
+To put one asset on a VM, clone only its folder. See "Get one asset onto a VM" in the top `README.md`.
+
 ## Build order
 
 | # | Asset | Folder | What it is | Status |
