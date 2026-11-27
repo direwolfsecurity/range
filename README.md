@@ -11,7 +11,7 @@ Build a cyber range on Proxmox: a small fake internet, pods to defend, attackers
 | `assets/red/` | Attack tooling and red team infrastructure |
 | `assets/white/` | Scoring and exercise control (hooks for [ForgeRange](https://github.com/direwolfsecurity/forgerange)), syslog, monitoring |
 | `docs/` | Range-wide documents |
-| `network/` | Templates: list your students in `student-list.csv`, and the scripts build the configs (coming) |
+| `network/` | List your students in `student-list.csv` and `gencfg.py` builds the configs. `network/devices/` has our own Cisco core and edge configs. |
 
 Each asset folder has a `README.md`, `config/`, `build/` and `docs/`. See `assets/README.md`.
 

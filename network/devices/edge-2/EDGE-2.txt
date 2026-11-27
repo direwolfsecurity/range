@@ -1,0 +1,178 @@
+! EDGE-2  --  Cisco 2811 + NM-16ESW 16-port switch module, IOS 12.4(24)T
+! Dire Wolf Security range  |  as built in the classroom range  |  GPL-3.0
+! Placeholders to fill before loading: <ENABLE_SECRET> <ADMIN_SECRET> <INSTRUCTOR_IP>
+! Load EDGE-2-vlan-database.txt first, then this, from the CONSOLE. See README.md.
+!
+hostname EDGE-2
+!
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+!
+enable secret <ENABLE_SECRET>
+username admin privilege 15 secret <ADMIN_SECRET>
+no aaa new-model
+!
+ip cef
+no ip source-route
+no ip domain-lookup
+ip domain-name range.lab
+no ip http server
+no ip http secure-server
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+!
+! ---- Built-in routed ports: not used by the range, kept shut ----
+interface FastEthernet0/0
+ description spare routed port
+ no ip address
+ shutdown
+interface FastEthernet0/1
+ description spare routed port
+ no ip address
+ shutdown
+!
+! ---- Switch module: uplink to the core ----
+interface FastEthernet1/0
+ description UPLINK to CORE Fa1/0/48
+ switchport mode access
+ switchport access vlan 320
+!
+! ---- Switch module: one port per seat firewall (outside interface) ----
+interface FastEthernet1/1
+ description SEAT-101 firewall outside
+ switchport mode access
+ switchport access vlan 101
+ spanning-tree portfast
+interface FastEthernet1/2
+ description SEAT-102 firewall outside
+ switchport mode access
+ switchport access vlan 102
+ spanning-tree portfast
+interface FastEthernet1/3
+ description SEAT-103 firewall outside
+ switchport mode access
+ switchport access vlan 103
+ spanning-tree portfast
+interface FastEthernet1/4
+ description SEAT-104 firewall outside
+ switchport mode access
+ switchport access vlan 104
+ spanning-tree portfast
+interface FastEthernet1/5
+ description SEAT-105 firewall outside
+ switchport mode access
+ switchport access vlan 105
+ spanning-tree portfast
+interface FastEthernet1/6
+ description SEAT-106 firewall outside
+ switchport mode access
+ switchport access vlan 106
+ spanning-tree portfast
+interface FastEthernet1/7
+ description SEAT-107 firewall outside
+ switchport mode access
+ switchport access vlan 107
+ spanning-tree portfast
+interface FastEthernet1/8
+ description SEAT-108 firewall outside
+ switchport mode access
+ switchport access vlan 108
+ spanning-tree portfast
+interface FastEthernet1/9
+ description SEAT-109 firewall outside
+ switchport mode access
+ switchport access vlan 109
+ spanning-tree portfast
+!
+! ---- Unused ports ----
+interface range FastEthernet1/10 - 15
+ description unused
+ shutdown
+!
+! ---- Gateways ----
+interface Vlan1
+ no ip address
+ shutdown
+interface Vlan320
+ description TRANSIT-2 to CORE
+ ip address 192.168.32.1 255.255.255.0
+ no ip redirects
+interface Vlan101
+ description SEAT-101 outside
+ ip address 192.168.101.254 255.255.255.0
+ no ip redirects
+interface Vlan102
+ description SEAT-102 outside
+ ip address 192.168.102.254 255.255.255.0
+ no ip redirects
+interface Vlan103
+ description SEAT-103 outside
+ ip address 192.168.103.254 255.255.255.0
+ no ip redirects
+interface Vlan104
+ description SEAT-104 outside
+ ip address 192.168.104.254 255.255.255.0
+ no ip redirects
+interface Vlan105
+ description SEAT-105 outside
+ ip address 192.168.105.254 255.255.255.0
+ no ip redirects
+interface Vlan106
+ description SEAT-106 outside
+ ip address 192.168.106.254 255.255.255.0
+ no ip redirects
+interface Vlan107
+ description SEAT-107 outside
+ ip address 192.168.107.254 255.255.255.0
+ no ip redirects
+interface Vlan108
+ description SEAT-108 outside
+ ip address 192.168.108.254 255.255.255.0
+ no ip redirects
+interface Vlan109
+ description SEAT-109 outside
+ ip address 192.168.109.254 255.255.255.0
+ no ip redirects
+!
+! ---- Routing: tell the core about the seat networks; default route to the core ----
+router ospf 1
+ router-id 192.168.32.1
+ log-adjacency-changes
+ passive-interface default
+ no passive-interface Vlan320
+ network 0.0.0.0 255.255.255.255 area 0
+!
+ip route 0.0.0.0 0.0.0.0 192.168.32.254 name CORE
+!
+! ---- Who may SSH to this router ----
+ip access-list standard MGMT-ONLY
+ remark who may SSH to this device
+ permit host <INSTRUCTOR_IP>
+ permit 172.16.12.0 0.0.0.255
+ deny   any log
+!
+! ---- Logs and time ----
+logging trap informational
+logging 172.16.12.30
+ntp server 172.16.11.123
+!
+banner motd ^
+  DIRE WOLF SECURITY range device. Authorized use only.
+^
+!
+line con 0
+ exec-timeout 15 0
+ logging synchronous
+ login local
+line aux 0
+ no exec
+ transport input none
+line vty 0 4
+ access-class MGMT-ONLY in
+ exec-timeout 15 0
+ login local
+ transport input ssh
+!
+end

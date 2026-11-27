@@ -1,0 +1,160 @@
+! EDGE-1  --  Cisco 2811 + NM-16ESW 16-port switch module, IOS 12.4(24)T
+! Dire Wolf Security range  |  as built in the classroom range  |  GPL-3.0
+! Placeholders to fill before loading: <ENABLE_SECRET> <ADMIN_SECRET> <INSTRUCTOR_IP>
+! Load EDGE-1-vlan-database.txt first, then this, from the CONSOLE. See README.md.
+!
+hostname EDGE-1
+!
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+!
+enable secret <ENABLE_SECRET>
+username admin privilege 15 secret <ADMIN_SECRET>
+no aaa new-model
+!
+ip cef
+no ip source-route
+no ip domain-lookup
+ip domain-name range.lab
+no ip http server
+no ip http secure-server
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+!
+! ---- Built-in routed ports: not used by the range, kept shut ----
+interface FastEthernet0/0
+ description spare routed port
+ no ip address
+ shutdown
+interface FastEthernet0/1
+ description spare routed port
+ no ip address
+ shutdown
+!
+! ---- Switch module: uplink to the core ----
+interface FastEthernet1/0
+ description UPLINK to CORE Fa1/0/47
+ switchport mode access
+ switchport access vlan 310
+!
+! ---- Switch module: one port per seat firewall (outside interface) ----
+interface FastEthernet1/1
+ description SEAT-201 firewall outside
+ switchport mode access
+ switchport access vlan 201
+ spanning-tree portfast
+interface FastEthernet1/2
+ description SEAT-202 firewall outside
+ switchport mode access
+ switchport access vlan 202
+ spanning-tree portfast
+interface FastEthernet1/3
+ description SEAT-203 firewall outside
+ switchport mode access
+ switchport access vlan 203
+ spanning-tree portfast
+interface FastEthernet1/4
+ description SEAT-204 firewall outside
+ switchport mode access
+ switchport access vlan 204
+ spanning-tree portfast
+interface FastEthernet1/5
+ description SEAT-205 firewall outside
+ switchport mode access
+ switchport access vlan 205
+ spanning-tree portfast
+interface FastEthernet1/6
+ description SEAT-206 firewall outside
+ switchport mode access
+ switchport access vlan 206
+ spanning-tree portfast
+interface FastEthernet1/7
+ description SEAT-207 firewall outside
+ switchport mode access
+ switchport access vlan 207
+ spanning-tree portfast
+!
+! ---- Unused ports ----
+interface range FastEthernet1/8 - 15
+ description unused
+ shutdown
+!
+! ---- Gateways ----
+interface Vlan1
+ no ip address
+ shutdown
+interface Vlan310
+ description TRANSIT-1 to CORE
+ ip address 192.168.31.1 255.255.255.0
+ no ip redirects
+interface Vlan201
+ description SEAT-201 outside
+ ip address 192.168.201.254 255.255.255.0
+ no ip redirects
+interface Vlan202
+ description SEAT-202 outside
+ ip address 192.168.202.254 255.255.255.0
+ no ip redirects
+interface Vlan203
+ description SEAT-203 outside
+ ip address 192.168.203.254 255.255.255.0
+ no ip redirects
+interface Vlan204
+ description SEAT-204 outside
+ ip address 192.168.204.254 255.255.255.0
+ no ip redirects
+interface Vlan205
+ description SEAT-205 outside
+ ip address 192.168.205.254 255.255.255.0
+ no ip redirects
+interface Vlan206
+ description SEAT-206 outside
+ ip address 192.168.206.254 255.255.255.0
+ no ip redirects
+interface Vlan207
+ description SEAT-207 outside
+ ip address 192.168.207.254 255.255.255.0
+ no ip redirects
+!
+! ---- Routing: tell the core about the seat networks; default route to the core ----
+router ospf 1
+ router-id 192.168.31.1
+ log-adjacency-changes
+ passive-interface default
+ no passive-interface Vlan310
+ network 0.0.0.0 255.255.255.255 area 0
+!
+ip route 0.0.0.0 0.0.0.0 192.168.31.254 name CORE
+!
+! ---- Who may SSH to this router ----
+ip access-list standard MGMT-ONLY
+ remark who may SSH to this device
+ permit host <INSTRUCTOR_IP>
+ permit 172.16.12.0 0.0.0.255
+ deny   any log
+!
+! ---- Logs and time ----
+logging trap informational
+logging 172.16.12.30
+ntp server 172.16.11.123
+!
+banner motd ^
+  DIRE WOLF SECURITY range device. Authorized use only.
+^
+!
+line con 0
+ exec-timeout 15 0
+ logging synchronous
+ login local
+line aux 0
+ no exec
+ transport input none
+line vty 0 4
+ access-class MGMT-ONLY in
+ exec-timeout 15 0
+ login local
+ transport input ssh
+!
+end
