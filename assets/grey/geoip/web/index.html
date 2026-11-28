@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Range GeoIP</title>
+<style>
+  :root { --bg: #f7f7f5; --fg: #1d1d1b; --muted: #5d5d58; --line: #d9d9d3; --accent: #2457a6; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #181817; --fg: #ececea; --muted: #a5a59f; --line: #3a3a37; --accent: #8fb3ef; } }
+  body { background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 16px; }
+  h1 { margin-bottom: .2rem; } .muted { color: var(--muted); }
+  table { border-collapse: collapse; width: 100%; } td { border-top: 1px solid var(--line); padding: .35rem .5rem; vertical-align: top; }
+  td:first-child { color: var(--muted); width: 11rem; }
+  code, pre { font-family: ui-monospace, monospace; font-size: .9em; } pre { background: var(--line); padding: .6rem; overflow-x: auto; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<h1>Range GeoIP</h1>
+<p class="muted">@SERVER_NAME@ &middot; GeoIP databases built from the @REGISTRY_NAME@ records. Range data only, not the real internet.</p>
+
+<h2>Where this server thinks you are</h2>
+<table id="me"><tr><td>Looking you up...</td><td></td></tr></table>
+<p class="muted">The same answer as JSON, for your own pages: <a href="/whoami">/whoami</a> (any site may fetch it).</p>
+
+<h2>Downloads</h2>
+<p>The <a href="/download/">download folder</a> holds the databases in MaxMind's format, so standard tools read them:
+<code>GeoLite2-City.mmdb</code>, <code>GeoLite2-Country.mmdb</code>, <code>GeoLite2-ASN.mmdb</code>
+(plain and <code>.gz</code>), their <code>SHA256SUMS</code> and the <code>registry.csv</code> they were built from.</p>
+
+<h2>Make your web server geo-aware</h2>
+<pre>curl -O http://@SERVER_NAME@/download/range-geoip-client.sh
+sudo bash range-geoip-client.sh --apache --php --go   # or --nginx</pre>
+<p>Apache then gives every request variables like <code>MM_CITY</code>, <code>MM_COUNTRY_CODE</code>,
+<code>MM_LATITUDE</code> and <code>MM_ASN</code>. In PHP: <code>$_SERVER['MM_CITY']</code>.</p>
+
+<script>
+  const rows = [["ip", "Your address"], ["city", "City"], ["region", "Region"], ["country_name", "Country"],
+                ["postal", "Postal code"], ["latitude", "Latitude"], ["longitude", "Longitude"],
+                ["accuracy_km", "Accuracy (km)"], ["time_zone", "Time zone"], ["asn", "AS number"], ["as_org", "Network owner"]];
+  fetch("/whoami").then(r => r.json()).then(me => {
+    const t = document.getElementById("me");
+    t.textContent = "";
+    for (const [key, label] of rows) {
+      const tr = t.insertRow();
+      tr.insertCell().textContent = label;
+      tr.insertCell().textContent = me[key] || (key === "ip" ? "?" : "not in the registry");
+    }
+  }).catch(() => { document.getElementById("me").rows[0].cells[0].textContent = "Lookup failed."; });
+</script>
+</body>
+</html>

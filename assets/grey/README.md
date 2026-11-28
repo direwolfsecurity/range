@@ -4,12 +4,13 @@ Grey assets are the fake internet. Neither team controls them; either team may u
 They live on VLAN 110 (GREY, 172.16.11.0/24), mostly on pve-r05.
 
 This list was agreed on 2026-11-13. It is in rough build order. The Status column says what is built.
-Addresses in use or proposed on GREY: resolver 172.16.11.10, roots 172.16.11.11 and .12, CA .20, connectivity check .30, maps .60, MQTT .83, NTP .123.
+Addresses in use or proposed on GREY: resolver 172.16.11.10, roots 172.16.11.11 and .12, CA .20, connectivity check .30, whois .43 (proposed), GeoIP .50 (proposed), maps .60, MQTT .83, NTP .123.
 
 ## The rule that ties it together
 
-One registry file is the single source of truth: `network\registry.csv` (not created yet).
+One registry file is the single source of truth: `network\registry\registry.csv`.
 One row per network: subnet, owner organization, fake ASN, country, city, latitude, longitude, domain.
+See `network\registry\README.md`. Assets that read it clone `network/registry` beside their own folder.
 
 Generators read that file and write the DNS zones (forward and reverse), the GeoIP database and the registry (whois) records.
 A student who looks up an IP then gets the same answer from all three.
@@ -20,7 +21,7 @@ To put one asset on a VM, clone only its folder. See "Get one asset onto a VM" i
 
 | # | Asset | Folder | What it is | Status |
 |---|---|---|---|---|
-| 0 | Registry file | `network\registry.csv` | The source of truth above, plus the generator scripts. | Not started |
+| 0 | Registry file | `network\registry\` | The source of truth above, and `registry.py`, which reads and checks it for every generator. | Written: 30 networks, 14 made-up owners |
 | 1 | Time server | `time\` | GPS-fed NTP on the 5G Pi, which is also the range's 5G link. Build guide: `time\5g\ntp\`. | Pi set up, waiting for a cable move onto the range (Tuesday 2026-12-01) |
 | 2 | Root DNS (two servers) | `root-dns\` | Authoritative only, recursion off. Second server pulls the zone by transfer. Includes root-hint scripts for resolvers. | Built on the range (root-a .11, root-b .12) |
 | 3 | TLD servers | `tld-dns\` | `.com`, `.org` and a range-only TLD, so delegation looks real. | Not started |
@@ -28,8 +29,8 @@ To put one asset on a VM, clone only its folder. See "Get one asset onto a VM" i
 | 5 | Certificate authority | `ca\` | Root CA with ACME (step-ca): a fake Let's Encrypt. Without it nothing has working HTTPS. | Script written and tested on a test machine, not built on the range yet |
 | 6 | Connectivity checks | `connectivity-check\` | Fake the URLs that Windows, Android, Apple, Firefox and Linux probe, so machines do not report "No Internet". Also serves the well-known names. | Script written and tested on a test machine, not built on the range yet |
 | 7 | Registry (fake ARIN) | `registry\` | Whois on port 43, RDAP over HTTP and a web lookup page. Reads the registry file. | Not started |
-| 8 | GeoIP database | `geoip\` | MaxMind-format (MMDB) City and ASN files built from the registry file, RFC 1918 ranges included. | Not started |
-| 9 | Map tile server | `maps\` | TileServer GL with OpenStreetMap vector tiles. Serves vector and PNG tiles. | Built (Monaco test data), not yet at its GREY address |
+| 8 | GeoIP database | `geoip\` | `geoip.lab`: MaxMind-format City, Country and ASN files built from the registry file, RFC 1918 ranges included. Download and update service, and a client that makes web servers geo-aware (Apache `mod_maxminddb`, nginx, PHP). | Script written and tested on a test machine (not the Apache module), not built on the range yet |
+| 9 | Map tile server | `maps\` | TileServer GL with OpenStreetMap vector tiles. Serves vector and PNG tiles. Plan for embeddable map services (JS libraries, HTTPS, geocoding, tracking): `maps\docs\web-map-services.md`. | Built (Monaco test data), not yet at its GREY address |
 | 10 | Package mirrors | `mirrors\` | Kali/Debian apt, PyPI, container registry, Windows updates. The staging repo at .40 is the start. | Not started |
 | 11 | Domain registrar | `root-dns\registrar\` | Web portal where students register a domain and get a delegation. Runs on the two root servers. | Built on the range |
 | 12 | Mail and Git host | `mail\`, `git\` | Internet mail and Gitea, for phishing and code-leak scenarios. | Not started |
@@ -54,9 +55,10 @@ Two jobs are part of other builds, not assets of their own:
 - Put the second root on a Pi so DNS survives a pve-r05 reboot.
 
 **GeoIP**
-- The MMDB writers (Go `mmdbwriter`, Perl `MaxMind::DB::Writer`) skip reserved ranges by default. Both have a switch to include them.
-- Set the database type to `GeoLite2-City` and `GeoLite2-ASN` so standard readers accept the files.
-- Some tools skip private addresses before they open the database. Test each tool that will use it. Not checked yet.
+- We write the MMDB files ourselves (`geoip\tools\build-mmdb.py`, standard library only), so private ranges are included.
+- The database types are `GeoLite2-City`, `GeoLite2-Country` and `GeoLite2-ASN`, so standard readers accept the files.
+- Some tools skip private addresses before they open the database. Checked and fine: mmdblookup, nginx geoip2, PHP and Python readers.
+  Still to check on the range: Apache `mod_maxminddb`, Wireshark, Suricata, Zeek.
 
 **Maps**
 - The full planet is on the order of 100 GB. A low-zoom world plus full detail for one state or region is far smaller.
@@ -70,8 +72,9 @@ Two jobs are part of other builds, not assets of their own:
 ## Open decisions (Tim)
 
 1. DNSSEC: sign our root, or turn validation off on resolvers? (The root DNS scripts turn it off for now.)
-2. Name of the range-only TLD.
-3. Name of the fake registry.
+2. Name of the range-only TLD. The registry file uses `.lab` for now (already used for `ca.lab`, `nic.lab` ...).
+3. Name of the fake registry. Working name: Grey Internet Registry (GIR).
 4. Map coverage: how much of the world at full detail?
-5. Addresses for each asset on 172.16.11.0/24, including confirming NTP at .123.
+5. Addresses for each asset on 172.16.11.0/24, including confirming NTP at .123, GeoIP at .50 and whois at .43.
 6. Check the Library for the old root DNS VM and the old registry code before building (skipped on 2026-11-13 to save time).
+7. Where Cyber City sits on the map (its registry row has a placeholder point).

@@ -1,0 +1,31 @@
+network,org_handle,org,asn,as_name,country,region,region_name,city,postal,latitude,longitude,accuracy_km,time_zone,domain,use
+172.16.11.0/24,GIR,Grey Internet Registry,64512,GIR-INFRA,US,VA,Virginia,Ashburn,20147,39.0438,-77.4874,20,America/New_York,nic.lab,GREY: the fake internet's own servers (roots and registrar 11-12; connectivity check 30; MQTT 83)
+172.16.11.10/32,QUAD10,Quad Ten Public DNS,64513,QUAD10-DNS,US,CA,California,San Jose,95113,37.3382,-121.8863,5,America/Los_Angeles,dns.lab,GREY: the public resolver (the range's 8.8.8.8)
+172.16.11.20/32,RENC,Range Encrypt,64514,RENC-CA,US,CA,California,San Francisco,94103,37.7749,-122.4194,5,America/Los_Angeles,ca.lab,GREY: certificate authority (the range's Let's Encrypt)
+172.16.11.60/32,ORMF,Open Range Maps Foundation,64515,ORMF-MAPS,GB,ENG,England,London,EC1A,51.5072,-0.1276,5,Europe/London,maps.lab,GREY: map tile server
+172.16.11.123/32,RTI,Range Time Institute,64516,RTI-TIME,US,CO,Colorado,Boulder,80305,39.9950,-105.2620,5,America/Denver,time.lab,GREY: GPS-fed NTP (the 5G Pi)
+172.16.12.0/24,EXCON,Exercise Control,64520,EXCON-WHITE,US,DC,District of Columbia,Washington,20001,38.8951,-77.0364,20,America/New_York,white.lab,WHITECELL: scoring and syslog (off-limits to both teams)
+172.16.13.0/24,NJH,Nightjar Hosting B.V.,64530,NIGHTJAR-AS,NL,NH,North Holland,Amsterdam,1012,52.3676,4.9041,20,Europe/Amsterdam,nightjar.lab,REDCELL: red team servers (rented hosting)
+10.250.250.0/24,TFOX,Tunnelfox VPN AG,64531,TUNNELFOX-VPN,CH,ZH,Zurich,Zurich,8001,47.3769,8.5417,50,Europe/Zurich,tunnelfox.lab,Red team VPN pool (a privacy VPN's exit)
+192.168.31.0/24,GRBN,Granite Backbone Networks,64540,GRANITE-BB,US,IL,Illinois,Chicago,60604,41.8781,-87.6298,50,America/Chicago,granite.lab,TRANSIT-1: core to EDGE-1
+192.168.32.0/24,GRBN,Granite Backbone Networks,64540,GRANITE-BB,US,IL,Illinois,Chicago,60604,41.8781,-87.6298,50,America/Chicago,granite.lab,TRANSIT-2: core to EDGE-2
+192.168.33.0/24,GRBN,Granite Backbone Networks,64540,GRANITE-BB,US,IL,Illinois,Chicago,60604,41.8781,-87.6298,50,America/Chicago,granite.lab,UPLINK: core to the outside gateway
+192.168.34.0/24,CCMN,Cyber City Municipal Network,64550,CYBERCITY-NET,US,KS,Kansas,Cyber City,66952,39.8283,-98.5795,5,America/Chicago,city.lab,CITY: Cyber City tiles (placeholder spot: the middle of the USA)
+192.168.200.0/24,LMG,Larkspur Medical Group,64560,LARKSPUR-AS,US,CO,Colorado,Denver,80202,39.7392,-104.9903,10,America/Denver,larkspur.lab,TARGETS-A: target company
+192.168.210.0/24,HBL,Harborline Logistics,64561,HARBORLINE-AS,US,WA,Washington,Seattle,98101,47.6062,-122.3321,10,America/Los_Angeles,harborline.lab,TARGETS-B: target company
+192.168.101.0/24,BSBB,Bluestem Broadband,64601,BLUESTEM,US,MA,Massachusetts,Boston,02108,42.3601,-71.0589,10,America/New_York,bluestem.lab,Seat 101 outside network (EDGE-2)
+192.168.102.0/24,BSBB,Bluestem Broadband,64601,BLUESTEM,US,GA,Georgia,Atlanta,30303,33.7490,-84.3880,10,America/New_York,bluestem.lab,Seat 102 outside network (EDGE-2)
+192.168.103.0/24,BSBB,Bluestem Broadband,64601,BLUESTEM,US,TX,Texas,Austin,78701,30.2672,-97.7431,10,America/Chicago,bluestem.lab,Seat 103 outside network (EDGE-2)
+192.168.104.0/24,BSBB,Bluestem Broadband,64601,BLUESTEM,US,AZ,Arizona,Phoenix,85004,33.4484,-112.0740,10,America/Phoenix,bluestem.lab,Seat 104 outside network (EDGE-2)
+192.168.105.0/24,BSBB,Bluestem Broadband,64601,BLUESTEM,US,OR,Oregon,Portland,97204,45.5152,-122.6784,10,America/Los_Angeles,bluestem.lab,Seat 105 outside network (EDGE-2)
+192.168.106.0/24,BSBB,Bluestem Broadband,64601,BLUESTEM,US,MN,Minnesota,Minneapolis,55401,44.9778,-93.2650,10,America/Chicago,bluestem.lab,Seat 106 outside network (EDGE-2)
+192.168.107.0/24,BSBB,Bluestem Broadband,64601,BLUESTEM,US,FL,Florida,Miami,33131,25.7617,-80.1918,10,America/New_York,bluestem.lab,Seat 107 outside network (EDGE-2)
+192.168.108.0/24,BSBB,Bluestem Broadband,64601,BLUESTEM,US,AK,Alaska,Anchorage,99501,61.2181,-149.9003,10,America/Anchorage,bluestem.lab,Seat 108 outside network (EDGE-2)
+192.168.109.0/24,BSBB,Bluestem Broadband,64601,BLUESTEM,US,HI,Hawaii,Honolulu,96813,21.3069,-157.8583,10,Pacific/Honolulu,bluestem.lab,Seat 109 outside network (EDGE-2)
+192.168.201.0/24,MGT,Meridian Global Telecom,64602,MERIDIAN-GT,MX,CMX,Mexico City,Mexico City,06000,19.4326,-99.1332,25,America/Mexico_City,meridian.lab,Seat 201 outside network (EDGE-1)
+192.168.202.0/24,MGT,Meridian Global Telecom,64602,MERIDIAN-GT,BR,SP,Sao Paulo,Sao Paulo,01000-000,-23.5505,-46.6333,25,America/Sao_Paulo,meridian.lab,Seat 202 outside network (EDGE-1)
+192.168.203.0/24,MGT,Meridian Global Telecom,64602,MERIDIAN-GT,ES,MD,Madrid,Madrid,28001,40.4168,-3.7038,25,Europe/Madrid,meridian.lab,Seat 203 outside network (EDGE-1)
+192.168.204.0/24,MGT,Meridian Global Telecom,64602,MERIDIAN-GT,UA,30,Kyiv City,Kyiv,01001,50.4501,30.5234,25,Europe/Kyiv,meridian.lab,Seat 204 outside network (EDGE-1)
+192.168.205.0/24,MGT,Meridian Global Telecom,64602,MERIDIAN-GT,KE,30,Nairobi,Nairobi,00100,-1.2921,36.8219,25,Africa/Nairobi,meridian.lab,Seat 205 outside network (EDGE-1)
+192.168.206.0/24,MGT,Meridian Global Telecom,64602,MERIDIAN-GT,JP,13,Tokyo,Tokyo,100-0001,35.6762,139.6503,25,Asia/Tokyo,meridian.lab,Seat 206 outside network (EDGE-1)
+192.168.207.0/24,MGT,Meridian Global Telecom,64602,MERIDIAN-GT,AU,NSW,New South Wales,Sydney,2000,-33.8688,151.2093,25,Australia/Sydney,meridian.lab,Seat 207 outside network (EDGE-1)
