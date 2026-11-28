@@ -4,7 +4,7 @@ Grey assets are the fake internet. Neither team controls them; either team may u
 They live on VLAN 110 (GREY, 172.16.11.0/24), mostly on pve-r05.
 
 This list was agreed on 2026-11-13. It is in rough build order. The Status column says what is built.
-Addresses in use or proposed on GREY: resolver 172.16.11.10, roots 172.16.11.11 and .12, reverse DNS .13 (proposed), CA .20, connectivity check .30, whois .43, GeoIP .50, maps .60, MQTT .83, NTP .123.
+Addresses in use or proposed on GREY: resolver 172.16.11.10, roots 172.16.11.11 and .12, reverse DNS .13, CA .20, connectivity check .30, whois .43, GeoIP .50, maps .60, MQTT .83, NTP .123.
 
 ## The rule that ties it together
 
@@ -29,7 +29,7 @@ To put one asset on a VM, clone only its folder. See "Get one asset onto a VM" i
 | 0 | Registry file | `network\registry\` | The source of truth above, and `registry.py`, which reads and checks it for every generator. | Written: 30 networks, 14 made-up owners |
 | 1 | Time server | `time\` | GPS-fed NTP on the 5G Pi, which is also the range's 5G link. Build guide: `time\5g\ntp\`. | Pi set up, waiting for a cable move onto the range (Tuesday 2026-12-01) |
 | 2 | Root DNS (two servers) | `root-dns\` | Authoritative only, recursion off. Second server pulls the zone by transfer. Includes root-hint scripts for resolvers. | Built on the range (root-a .11, root-b .12) |
-| 3 | TLD and reverse DNS | `reverse-dns\` | Reverse DNS: a PTR for every registry address (`192-168-103-5.austin.bluestem.lab`), the made-up ISPs' forward zones, and `arpa` handed over by the root. The TLDs (`.com`, `.org`, `.lab` ...) are hosted on the roots by the registrar (#11); separate TLD servers are open decision 8. | Script written and tested on a test machine, not built on the range yet |
+| 3 | TLD and reverse DNS | `reverse-dns\` | Reverse DNS: a PTR for every registry address (`192-168-103-5.austin.bluestem.lab`), the made-up ISPs' forward zones, and `arpa` handed over by the root. The TLDs (`.com`, `.org`, `.lab` ...) stay on the roots, hosted by the registrar (#11): decided 2026-11-28. | Script written and tested on a test machine, not built on the range yet |
 | 4 | Public resolver | `root-dns\` (`set-root-hints-ubuntu.sh`) | The range's "8.8.8.8" at 172.16.11.10. Unbound with our root hints. | Built on the range |
 | 5 | Certificate authority | `ca\` | Root CA with ACME (step-ca): a fake Let's Encrypt. Without it nothing has working HTTPS. | Script written and tested on a test machine, not built on the range yet |
 | 6 | Connectivity checks | `connectivity-check\` | Fake the URLs that Windows, Android, Apple, Firefox and Linux probe, so machines do not report "No Internet". Also serves the well-known names. | Script written and tested on a test machine, not built on the range yet |
@@ -83,8 +83,9 @@ Two jobs are part of other builds, not assets of their own:
 2. Name of the range-only TLD. The registry file uses `.lab` for now (already used for `ca.lab`, `nic.lab` ...).
 3. Name of the fake registry. Working name: Grey Internet Registry (GIR).
 4. Map coverage: how much of the world at full detail?
-5. Addresses for each asset on 172.16.11.0/24, including confirming NTP at .123 and reverse DNS at .13 (GeoIP .50 and whois .43 confirmed 2026-11-28).
+5. Addresses for each asset on 172.16.11.0/24, including confirming NTP at .123 (GeoIP .50, whois .43 and reverse DNS .13 confirmed 2026-11-28).
 6. Check the Library for the old root DNS VM and the old registry code before building (skipped on 2026-11-13 to save time).
 7. Where Cyber City sits on the map (its registry row has a placeholder point).
-8. Separate TLD servers. Today the roots also host the TLDs (the registrar puts them there), so `dig +trace` shows the root
-   answering for `.com`. Real TLD servers mean changing the roots and the registrar (a hidden primary), not just adding a server.
+
+Decided 2026-11-28: the roots keep hosting the TLDs (no separate TLD servers). `dig +trace` shows the root answering for
+`.com` as well; that is a known difference from the real internet.
