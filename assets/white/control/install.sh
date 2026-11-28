@@ -68,8 +68,14 @@ if (( KEYS )); then
     echo "geoip.lab (172.16.11.50):"
     echo "  echo 'from=\"$CONTROL_IP\",restrict,command=\"/usr/local/sbin/geoip-apply\" $key' | sudo tee -a /root/.ssh/authorized_keys"
     echo
-    echo "The key can run only that one command, and only from $CONTROL_IP. Then set REGISTRAR and GEOIP"
-    echo "in control.conf, run --go again, and check with: greyctl status"
+    echo "whois.lab (172.16.11.43):"
+    echo "  echo 'from=\"$CONTROL_IP\",restrict,command=\"/usr/local/sbin/whois-apply\" $key' | sudo tee -a /root/.ssh/authorized_keys"
+    echo
+    echo "reverse DNS, a.in-addr-servers.arpa (172.16.11.13):"
+    echo "  echo 'from=\"$CONTROL_IP\",restrict,command=\"/usr/local/sbin/dns-apply\" $key' | sudo tee -a /root/.ssh/authorized_keys"
+    echo
+    echo "The key can run only that one command, and only from $CONTROL_IP. Then set REGISTRAR, GEOIP,"
+    echo "WHOIS and DNS in control.conf, run --go again, and check with: greyctl status"
     exit 0
 fi
 

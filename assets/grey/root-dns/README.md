@@ -53,7 +53,8 @@ Running it again is safe, but it rewrites the BIND settings. If the registrar is
 
 ## 2. Hand a TLD to another server (optional)
 
-Use this when a TLD lives on a different server, such as a team's own `.corp`. Run it on the primary:
+Use this when a TLD lives on a different server, such as a team's own `.corp`, or `arpa` on the range's reverse DNS server
+(`assets/grey/reverse-dns/`, its `install.sh --registrar` prints the line). Run it on the primary:
 
 ```bash
 sudo bash add-tld.sh add corp dc01.corp 10.20.0.10
@@ -130,6 +131,8 @@ Windows DNS server, in an Administrator PowerShell:
 ```
 
 Both turn off DNSSEC checking. Our root is not signed, so with checking on every lookup would fail.
+The Ubuntu script also stops BIND and Unbound from answering private-range reverse lookups (`dig -x 192.168.103.5`)
+with "no such name" themselves, so those reach the range's reverse DNS server. Resolvers set up before 2026-11-28: run step 4 again.
 Client PCs do not use root hints. Point them at a resolver.
 
 ## Check it
@@ -165,5 +168,5 @@ primary and secondary roots, `add-tld.sh`, the registrar on both roots (web sign
 of a new TLD to the secondary), and an Unbound resolver resolving `www.nic.lab` through the roots. `--serve` (added the same day) tested on Unbound (answers listed networks, refuses others) and checked with `named-checkconf` on BIND.
 Not yet tested: on two separate VMs on GREY, a BIND resolver, and the Windows script.
 
-Not built yet (see the grey cell list): query logs to WHITECELL syslog, reverse (PTR) zones,
-and resolvers answering private-range reverse lookups through our servers.
+Not built yet (see the grey cell list): query logs to WHITECELL syslog.
+Reverse (PTR) zones live on their own server: `assets/grey/reverse-dns/` (the root hands it `arpa`).

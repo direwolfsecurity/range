@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# whois-apply - give the whois server the exercise teams the control server sends.
+# Installed to /usr/local/sbin/whois-apply by install.sh. Runs as root.
+#
+# The range control server runs it over SSH with a key that can run nothing else:
+#   whois-apply overlay < overlay.csv     check the exercise overlay, then save it
+#   whois-apply status                    print what is loaded (md5 of the overlay, the service)
+# Anything else is refused. The overlay is checked before it is saved; a bad one changes nothing.
+# whoisd notices the new file by itself within a few seconds: no restart.
+#
+# License: GPL-3.0, Dire Wolf Security.
+
+set -euo pipefail
+
+APP="/opt/direwolf-whois"
+OVERLAY="@OVERLAY@"
+
+# Over SSH the command the client asked for is in SSH_ORIGINAL_COMMAND; by hand it is "$*".
+request="${SSH_ORIGINAL_COMMAND:-$*}"
+
+case "$request" in
+    overlay)
+        tmp="$(mktemp)"
+        trap 'rm -f "$tmp"' EXIT
+        # Read at most 1 MB from stdin: an overlay for a handful of teams is a few KB.
+        head -c 1048576 > "$tmp"
+        if [[ -s "$tmp" ]]; then
+            python3 "$APP/registry/registry.py" "$APP/registry/registry.csv" --overlay "$tmp" \
+                || { echo "whois-apply: overlay refused, nothing changed"; exit 2; }
+        fi
+        install -D -m 644 "$tmp" "$OVERLAY"
+        systemctl is-active -q direwolf-whois.service || { echo "whois-apply: overlay saved, but direwolf-whois is not running"; exit 1; }
+        lines=0
+        [[ -s "$OVERLAY" ]] && lines=$(($(grep -c . "$OVERLAY") - 1))
+        echo "whois-apply: ok, $lines exercise network(s) loaded"
+        ;;
+    status)
+        if [[ -s "$OVERLAY" ]]; then echo "overlay $(md5sum < "$OVERLAY" | cut -c1-32)"; else echo "overlay none"; fi
+        echo "service $(systemctl is-active direwolf-whois.service 2>/dev/null || true)"
+        echo "registry $(md5sum < "$APP/registry/registry.csv" | cut -c1-32)"
+        ;;
+    *)
+        echo "whois-apply: only 'overlay' and 'status' are allowed (got '$request')" >&2
+        exit 64
+        ;;
+esac

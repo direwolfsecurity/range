@@ -5,7 +5,8 @@
 #
 # Detects and configures whichever is installed:  BIND9 (named)  and/or  Unbound
 # Also turns OFF DNSSEC validation — with a private root, the real root trust
-# anchor can never validate, so every lookup would SERVFAIL otherwise.
+# anchor can never validate, so every lookup would SERVFAIL otherwise — and lets
+# private-range reverse lookups (192.168.x.x ...) reach the range reverse DNS server.
 #
 # Usage:
 #   sudo ./set-root-hints-ubuntu.sh --root1-ip 10.0.0.10 --root2-ip 10.0.0.11
@@ -143,6 +144,15 @@ EOF
   fi
   log "  dnssec-validation no"
 
+  # Private-range reverse lookups (10.x, 172.16-31.x, 192.168.x): BIND answers them itself with
+  # "no such name" unless this is off. Off = they go to the range's reverse DNS server.
+  if grep -qE '^\s*empty-zones-enable' "$OPT"; then
+    sed -i -E 's/^(\s*)empty-zones-enable\s+[a-z]+;/\1empty-zones-enable no;  \/\/ range: private reverse names/' "$OPT"
+  else
+    sed -i -E '0,/options\s*\{/s//options {\n\tempty-zones-enable no;  \/\/ range: private reverse names/' "$OPT"
+  fi
+  log "  empty-zones-enable no (private reverse lookups go to the range)"
+
   if grep -qE '^\s*forwarders\s*\{[^}]*[0-9]' "$OPT"; then
     warn "  forwarders{} are set in $OPT — root hints are only used if forwarding fails."
     warn "  Remove the forwarders block (or add 'forward first;') if you want true recursion."
@@ -190,6 +200,10 @@ server:
     root-hints: "/etc/unbound/range-root.hints"
     module-config: "iterator"        # no validator: private root can't validate
     harden-referral-path: no
+    # Private-range reverse lookups (10.x, 172.16-31.x, 192.168.x) go to the range's reverse
+    # DNS server, instead of Unbound answering "no such name" itself.
+    unblock-lan-zones: yes
+    insecure-lan-zones: yes
 EOF
   if [[ ${#SERVE_NETS[@]} -gt 0 ]]; then
     # Answer the range, not only this machine.

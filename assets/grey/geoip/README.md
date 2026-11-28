@@ -22,7 +22,7 @@ Graylog and Elastic. Range addresses are private (RFC 1918). Our builder include
 them unless told not to.
 
 The answers are only as true as the registry. A student who looks up `192.168.204.10` gets Kyiv, Ukraine, AS64602
-Meridian Global Telecom, because the registry says so. The whois server (asset #7) will give the same answer.
+Meridian Global Telecom, because the registry says so. The whois server (`../whois/`, asset #7) and reverse DNS (`../reverse-dns/`) give the same answer.
 
 ## What it serves
 

@@ -46,7 +46,7 @@ What a snapshot covers, and what it does not:
 
 | Covered | Not covered (reset these their own way) |
 |---|---|
-| Exercise teams (GeoIP, and whois and DNS once they are built) | Certificates the CA has issued. They expire by themselves (90 days). |
+| Exercise teams (GeoIP, whois and reverse DNS) | Certificates the CA has issued. They expire by themselves (90 days). |
 | Exercise domains | MQTT logins (`assets/grey/mqtt/`, re-run its install) |
 | Every domain on the registrar, students' own included, and whether registration is open | Student pods and VMs (Proxmox) |
 
@@ -56,7 +56,7 @@ What a snapshot covers, and what it does not:
 |---|---|
 | Ubuntu Server 24.04 VM or container | 1 CPU, 512 MB RAM, 4 GB disk. A static address. |
 | Address | Planned: **172.16.12.40** on WHITECELL (VLAN 120). No name in the fake internet's DNS; ForgeRange uses the address. |
-| The grey servers it controls | The registrar on root-a (built). GeoIP when it is built. Whois and the TLD/reverse DNS server when they exist. |
+| The grey servers it controls | The registrar on root-a (built). GeoIP (`geoip-apply`), whois (`whois-apply`) and reverse DNS (`dns-apply`) once each is built. |
 | Internet, for the first setup | Only if `openssh-client` or `ufw` are missing. |
 
 ## 1. Get the files
@@ -90,12 +90,12 @@ and only from this server's address.
    ```bash
    cd ~/range/assets/grey/root-dns/registrar && git pull && sudo bash install-remote.sh
    ```
-   GeoIP installs its own (`geoip-apply`) every time its `install.sh --go` runs.
+   GeoIP, whois and reverse DNS install their own (`geoip-apply`, `whois-apply`, `dns-apply`) every time their `install.sh --go` runs.
 2. On this server, print the lines to add:
    ```bash
    sudo bash install.sh --keys
    ```
-3. Paste each line on its grey server. Set `REGISTRAR` and `GEOIP` in `control.conf`, then `sudo bash install.sh --go`.
+3. Paste each line on its grey server. Set `REGISTRAR`, `GEOIP`, `WHOIS` and `DNS` in `control.conf`, then `sudo bash install.sh --go`.
 4. `greyctl status` should say `ok` for each one.
 
 ## 4. HTTPS for the API
@@ -194,3 +194,5 @@ Written 2026-11-28 and tested on a scratch Ubuntu machine (not on the range yet)
 snapshot, reset to zero with a student's domain removed, restore); the API over HTTP and HTTPS with the three token scopes;
 GeoIP's overlay check and a real database build from a merged registry. Not yet tested: GeoIP's full `install.sh --go` with an
 overlay on geoip.lab, and ForgeRange calling the API (ForgeRange's client is not written yet).
+Added 2026-11-28: whois (`whois-apply`) and reverse DNS (`dns-apply`), tested on a scratch machine with `cmd:` targets: a team
+added, `greyctl status`, and reset to zero all reached both, and a PTR and a whois answer changed and came back.
