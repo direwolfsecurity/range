@@ -8,8 +8,8 @@ Everything that answers that question is built from this one file, so a student 
 | Reads it | Asset | State |
 |---|---|---|
 | GeoIP databases (`.mmdb`, for Apache, nginx, Wireshark ...) | `assets/grey/geoip/` (#8) | built |
-| Whois, RDAP and the lookup web page | `assets/grey/registry/` (#7) | not started |
-| DNS: forward zones for each domain, reverse (PTR) zones for each network | `assets/grey/tld-dns/` (#3) | not started |
+| Whois, RDAP and the lookup web page | `assets/grey/whois/` (#7) | built |
+| DNS: reverse (PTR) names for every network, forward zones for the ISP domains | `assets/grey/reverse-dns/` (#3) | built |
 
 License: CC BY-SA 4.0 for this guide and the data, GPL-3.0 for `registry.py`. Dire Wolf Security.
 

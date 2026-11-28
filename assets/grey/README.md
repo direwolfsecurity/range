@@ -4,7 +4,7 @@ Grey assets are the fake internet. Neither team controls them; either team may u
 They live on VLAN 110 (GREY, 172.16.11.0/24), mostly on pve-r05.
 
 This list was agreed on 2026-11-13. It is in rough build order. The Status column says what is built.
-Addresses in use or proposed on GREY: resolver 172.16.11.10, roots 172.16.11.11 and .12, CA .20, connectivity check .30, whois .43 (proposed), GeoIP .50 (proposed), maps .60, MQTT .83, NTP .123.
+Addresses in use or proposed on GREY: resolver 172.16.11.10, roots 172.16.11.11 and .12, reverse DNS .13 (proposed), CA .20, connectivity check .30, whois .43, GeoIP .50, maps .60, MQTT .83, NTP .123.
 
 ## The rule that ties it together
 
@@ -12,7 +12,7 @@ One registry file is the single source of truth: `network\registry\registry.csv`
 One row per network: subnet, owner organization, fake ASN, country, city, latitude, longitude, domain.
 See `network\registry\README.md`. Assets that read it clone `network/registry` beside their own folder.
 
-Generators read that file and write the DNS zones (forward and reverse), the GeoIP database and the registry (whois) records.
+Generators read that file and write the reverse DNS zones (`reverse-dns\`), the GeoIP database (`geoip\`) and the whois records (`whois\`).
 A student who looks up an IP then gets the same answer from all three.
 
 Exercise teams do not change that file. They go in an overlay that each generator lays over it (same columns).
@@ -29,11 +29,11 @@ To put one asset on a VM, clone only its folder. See "Get one asset onto a VM" i
 | 0 | Registry file | `network\registry\` | The source of truth above, and `registry.py`, which reads and checks it for every generator. | Written: 30 networks, 14 made-up owners |
 | 1 | Time server | `time\` | GPS-fed NTP on the 5G Pi, which is also the range's 5G link. Build guide: `time\5g\ntp\`. | Pi set up, waiting for a cable move onto the range (Tuesday 2026-12-01) |
 | 2 | Root DNS (two servers) | `root-dns\` | Authoritative only, recursion off. Second server pulls the zone by transfer. Includes root-hint scripts for resolvers. | Built on the range (root-a .11, root-b .12) |
-| 3 | TLD servers | `tld-dns\` | `.com`, `.org` and a range-only TLD, so delegation looks real. | Not started |
+| 3 | TLD and reverse DNS | `reverse-dns\` | Reverse DNS: a PTR for every registry address (`192-168-103-5.austin.bluestem.lab`), the made-up ISPs' forward zones, and `arpa` handed over by the root. The TLDs (`.com`, `.org`, `.lab` ...) are hosted on the roots by the registrar (#11); separate TLD servers are open decision 8. | Script written and tested on a test machine, not built on the range yet |
 | 4 | Public resolver | `root-dns\` (`set-root-hints-ubuntu.sh`) | The range's "8.8.8.8" at 172.16.11.10. Unbound with our root hints. | Built on the range |
 | 5 | Certificate authority | `ca\` | Root CA with ACME (step-ca): a fake Let's Encrypt. Without it nothing has working HTTPS. | Script written and tested on a test machine, not built on the range yet |
 | 6 | Connectivity checks | `connectivity-check\` | Fake the URLs that Windows, Android, Apple, Firefox and Linux probe, so machines do not report "No Internet". Also serves the well-known names. | Script written and tested on a test machine, not built on the range yet |
-| 7 | Registry (fake ARIN) | `registry\` | Whois on port 43, RDAP over HTTP and a web lookup page. Reads the registry file. | Not started |
+| 7 | Registry (fake ARIN) | `whois\` | `whois.lab`: whois on port 43, RDAP over HTTP and a web lookup page. Reads the registry file; domain questions go to the registrar. Plain `whois` works once check.lab answers `whois.arin.net` and friends. | Script written and tested on a test machine, not built on the range yet |
 | 8 | GeoIP database | `geoip\` | `geoip.lab`: MaxMind-format City, Country and ASN files built from the registry file, RFC 1918 ranges included. Download and update service, and a client that makes web servers geo-aware (Apache `mod_maxminddb`, nginx, PHP). | Script written and tested on a test machine (not the Apache module), not built on the range yet |
 | 9 | Map tile server | `maps\` | TileServer GL with OpenStreetMap vector tiles. Serves vector and PNG tiles. Plan for embeddable map services (JS libraries, HTTPS, geocoding, tracking): `maps\docs\web-map-services.md`. | Built (Monaco test data), not yet at its GREY address |
 | 10 | Package mirrors | `mirrors\` | Kali/Debian apt, PyPI, container registry, Windows updates. The staging repo at .40 is the start. | Not started |
@@ -71,9 +71,11 @@ Two jobs are part of other builds, not assets of their own:
 - Fonts and icon sprites must be hosted locally too. This is the usual air-gap failure.
 - Map data is not republished. A script fetches it from the source, with OpenStreetMap credit.
 
-**Registry**
+**Registry (whois) and reverse DNS**
 - Use a made-up registry name, not ARIN's, because this is published.
-- We own the root, so the stock `whois` client can find our server with no flags.
+- We own DNS, so the stock `whois` client finds our server with no flags: check.lab answers `whois.arin.net`,
+  `whois.ripe.net`, `whois.verisign-grs.com` and the rest with whois.lab's address (in `connectivity-check\names.conf`).
+- Resolvers must not answer private reverse lookups themselves (see Root DNS above). `set-root-hints-ubuntu.sh` handles it.
 
 ## Open decisions (Tim)
 
@@ -81,6 +83,8 @@ Two jobs are part of other builds, not assets of their own:
 2. Name of the range-only TLD. The registry file uses `.lab` for now (already used for `ca.lab`, `nic.lab` ...).
 3. Name of the fake registry. Working name: Grey Internet Registry (GIR).
 4. Map coverage: how much of the world at full detail?
-5. Addresses for each asset on 172.16.11.0/24, including confirming NTP at .123, GeoIP at .50 and whois at .43.
+5. Addresses for each asset on 172.16.11.0/24, including confirming NTP at .123 and reverse DNS at .13 (GeoIP .50 and whois .43 confirmed 2026-11-28).
 6. Check the Library for the old root DNS VM and the old registry code before building (skipped on 2026-11-13 to save time).
 7. Where Cyber City sits on the map (its registry row has a placeholder point).
+8. Separate TLD servers. Today the roots also host the TLDs (the registrar puts them there), so `dig +trace` shows the root
+   answering for `.com`. Real TLD servers mean changing the roots and the registrar (a hidden primary), not just adding a server.
