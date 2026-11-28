@@ -20,7 +20,8 @@
 and HTTPS works on every range site that uses it.</p>
 
 <p><strong>Check the fingerprint first.</strong> This page is plain HTTP, so anyone on the network could change it.
-The fingerprint below must match the one your teacher posted in the room.</p>
+The fingerprint below must match the one your teacher posted in the room.
+The scripts' quick check reads <a href="fingerprint.txt">fingerprint.txt</a> from this same server, so it can't catch that kind of tampering. The strict check can.</p>
 <p class="fp">SHA-256: @FP@</p>
 
 <h2>Files</h2>
@@ -35,11 +36,14 @@ The fingerprint below must match the one your teacher posted in the room.</p>
 <h2>Kali, Ubuntu, Debian</h2>
 <pre>curl -O http://@SERVER_NAME@/install-root-linux.sh
 less install-root-linux.sh          # read a script before you run it as root
-sudo bash install-root-linux.sh --fingerprint @FP@</pre>
+sudo bash install-root-linux.sh     # quick check against fingerprint.txt
+# strict check, against the fingerprint posted in the room:
+sudo bash install-root-linux.sh --fingerprint &lt;posted fingerprint&gt;</pre>
 
 <h2>Windows (PowerShell as Administrator)</h2>
 <pre>curl.exe -O http://@SERVER_NAME@/Install-RangeRoot.ps1
-powershell -ExecutionPolicy Bypass -File .\Install-RangeRoot.ps1 -Fingerprint @FP@</pre>
+powershell -ExecutionPolicy Bypass -File .\Install-RangeRoot.ps1
+# strict: add -Fingerprint &lt;posted fingerprint&gt;</pre>
 
 <h2>Servers: get a certificate with ACME</h2>
 <pre>sudo certbot certonly --standalone -d myserver.lab --server @ACME@</pre>

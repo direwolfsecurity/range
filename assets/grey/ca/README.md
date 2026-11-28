@@ -94,12 +94,18 @@ Check from any range machine: `dig ca.lab` answers `172.16.11.20`, and `http://c
 Every client needs the root certificate once. The download page `http://ca.lab/` has it in every format, plus install scripts.
 That page is plain HTTP on purpose: a machine can't check HTTPS before it trusts the root. That is also how real bootstrapping works,
 and why the **fingerprint check** matters. Anyone who can tamper with traffic on GREY could hand out their own root instead (a good lab).
-The scripts refuse a root whose fingerprint does not match.
+The scripts refuse a root whose fingerprint does not match. They check it one of two ways:
+
+- **Quick** (no fingerprint given): the script also downloads `http://ca.lab/fingerprint.txt` and compares. No copy and paste.
+  This catches a broken download or the wrong server, but **not** an attacker: both files come from the same place over plain HTTP,
+  so whoever can swap one can swap both. Fine for building and for everyday class use.
+- **Strict** (`--fingerprint <posted fingerprint>`): compares with the fingerprint you posted in the room. This is real proof.
+  Use it for the lab where students learn why the check matters, or whenever GREY might be under attack.
 
 | Client | How |
 |---|---|
-| **Kali, Ubuntu, Debian** | `curl -O http://ca.lab/install-root-linux.sh`, read it, then `sudo bash install-root-linux.sh --fingerprint <fingerprint>`. It adds the root to the system store (curl, wget, apt, git, Python's system certificates), to Firefox through a policy file, and to each user's Chrome/Chromium store when `certutil` (`libnss3-tools`) is installed. `--remove` undoes it. For a Kali image, run it once before you save the image. |
-| **Windows 11** | PowerShell as Administrator: `curl.exe -O http://ca.lab/Install-RangeRoot.ps1`, then `powershell -ExecutionPolicy Bypass -File .\Install-RangeRoot.ps1 -Fingerprint <fingerprint>`. It adds the root to "Trusted Root Certification Authorities" (Local Computer), which Edge and Chrome use, and turns on Firefox's `ImportEnterpriseRoots` policy. `-Remove` undoes it. |
+| **Kali, Ubuntu, Debian** | `curl -O http://ca.lab/install-root-linux.sh`, read it, then `sudo bash install-root-linux.sh` (quick) or `sudo bash install-root-linux.sh --fingerprint <fingerprint>` (strict). It adds the root to the system store (curl, wget, apt, git, Python's system certificates), to Firefox through a policy file, and to each user's Chrome/Chromium store when `certutil` (`libnss3-tools`) is installed. `--remove` undoes it. For a Kali image, run it once before you save the image. |
+| **Windows 11** | PowerShell as Administrator: `curl.exe -O http://ca.lab/Install-RangeRoot.ps1`, then `powershell -ExecutionPolicy Bypass -File .\Install-RangeRoot.ps1` (quick), or add `-Fingerprint <fingerprint>` (strict). It adds the root to "Trusted Root Certification Authorities" (Local Computer), which Edge and Chrome use, and turns on Firefox's `ImportEnterpriseRoots` policy. `-Remove` undoes it. |
 | **Windows domain (pods)** | On the domain controller, a Group Policy: Computer Configuration > Policies > Windows Settings > Security Settings > Public Key Policies > Trusted Root Certification Authorities > Import `root_ca.crt`. Every domain PC gets it at the next policy refresh. |
 | **Python with pip packages** | `requests` from pip uses its own list (certifi). Point it at the system store: `export REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt`. |
 | **ESP32 (Arduino)** | Download `http://ca.lab/root_ca.h` into the sketch folder, `#include "root_ca.h"`, then `client.setCACert(RANGE_ROOT_CA);` on the `WiFiClientSecure`. Set the clock first (`configTime(0, 0, "pool.ntp.org")`, which points at the range NTP server once the connectivity-check names are in). |

@@ -2,11 +2,17 @@
 # install-root-linux.sh - trust the range root certificate on Kali, Ubuntu or Debian.
 #
 # Usage:
-#   sudo bash install-root-linux.sh --fingerprint <sha256>      download from http://ca.lab and check it
+#   sudo bash install-root-linux.sh                             quick: checks it against http://ca.lab/fingerprint.txt
+#   sudo bash install-root-linux.sh --fingerprint <sha256>      strict: checks it against the fingerprint posted in the room
 #   sudo bash install-root-linux.sh --file root_ca.crt --fingerprint <sha256>
 #   sudo bash install-root-linux.sh --remove                    stop trusting it
 #
-# Other options: --url http://ca.lab   --yes (no question when you give no fingerprint)
+# Other options: --url http://ca.lab   --yes (with --file and no fingerprint: no question)
+#
+# Quick vs strict: the quick check gets the fingerprint from the same server, over the same plain HTTP,
+# as the certificate. It catches a broken download or the wrong server, but NOT someone who tampers
+# with the network: they can swap both files. Only a fingerprint from somewhere else (the wall, a
+# handout) proves the certificate is ours.
 #
 # It adds the root to the system store (curl, wget, apt, Python, Chromium on most setups),
 # to Firefox (a policy file) and to each user's Chrome/Chromium store if certutil is installed.
@@ -126,6 +132,14 @@ if [[ -n "$WANT_FP" ]]; then
     WANT_FP="$(echo "$WANT_FP" | tr -d ': ' | tr 'A-F' 'a-f')"
     [[ "$GOT_FP" == "$WANT_FP" ]] || die "Fingerprint does NOT match. Someone may have swapped the certificate. Not installing it."
     echo "   matches the one you gave"
+elif [[ -z "$FILE" ]]; then
+    # Quick check: the fingerprint file from the same download page.
+    PAGE_FP="$(curl -fsS --max-time 15 "$URL/fingerprint.txt" | tr -d ': \r\n' | tr 'A-F' 'a-f')" || die "Could not download $URL/fingerprint.txt."
+    [[ "$GOT_FP" == "$PAGE_FP" ]] || die "The certificate does not match $URL/fingerprint.txt. Not installing it."
+    echo "   matches $URL/fingerprint.txt"
+    echo "   NOTE: both came from the same server over plain HTTP. Someone tampering with the network could swap both."
+    echo "   For real proof, compare the fingerprint above with the one posted in the room,"
+    echo "   or run again with --fingerprint <posted fingerprint>."
 elif (( YES )); then
     echo "   not checked (--yes)"
 else

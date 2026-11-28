@@ -3,7 +3,13 @@
   Trust the range root certificate on Windows (Edge, Chrome, Firefox and most programs).
 
 .EXAMPLE
+  powershell -ExecutionPolicy Bypass -File .\Install-RangeRoot.ps1
+  Quick: checks the certificate against http://ca.lab/fingerprint.txt.
+
+.EXAMPLE
   powershell -ExecutionPolicy Bypass -File .\Install-RangeRoot.ps1 -Fingerprint <sha256>
+  Strict: checks it against the fingerprint posted in the room. The quick check gets the fingerprint
+  from the same server over plain HTTP, so someone tampering with the network could swap both.
 
 .EXAMPLE
   .\Install-RangeRoot.ps1 -File .\root_ca.crt -Fingerprint <sha256>
@@ -71,6 +77,23 @@ if ($Fingerprint) {
         exit 1
     }
     Write-Host "Matches the one you gave."
+} elseif (-not $File) {
+    # Quick check: the fingerprint file from the same download page.
+    try {
+        $page = (Invoke-WebRequest -UseBasicParsing -Uri "$Url/fingerprint.txt").Content
+    } catch {
+        Write-Host "ERROR: could not download $Url/fingerprint.txt."
+        exit 1
+    }
+    if ($page -is [byte[]]) { $page = [System.Text.Encoding]::ASCII.GetString($page) }
+    $want = ($page -replace "[:\s]", "").ToLower()
+    if ($got -ne $want) {
+        Write-Host "ERROR: the certificate does not match $Url/fingerprint.txt. Not installing it."
+        exit 1
+    }
+    Write-Host "Matches $Url/fingerprint.txt."
+    Write-Host "NOTE: both came from the same server over plain HTTP. Someone tampering with the network could swap both."
+    Write-Host "For real proof, compare the fingerprint above with the one posted in the room, or use -Fingerprint."
 } else {
     $answer = Read-Host "Does it match the fingerprint your teacher posted? [y/N]"
     if ($answer -ne "y") { Write-Host "Not installing it."; exit 1 }
