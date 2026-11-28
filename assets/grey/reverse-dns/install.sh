@@ -298,12 +298,25 @@ args=(--registry "$REGISTRY" --names "$NAMES_FILE" --server-ip "$SERVER_IP" --ns
 [[ -n "$OVERLAY" ]] && args+=(--overlay "$OVERLAY")
 [[ -f "$STATE_DIR/state.json" ]] && args+=(--state "$STATE_DIR/state.json")
 (( ${#ISP[@]} )) && args+=(--isp "${ISP[@]}")
+if ! command -v python3 >/dev/null; then
+    # Test mode on a fresh container: python3 comes with step 1, which only runs with --go.
+    say "Test mode: python3 is not installed yet, so the zones can't be built for a preview."
+    echo "   Run again with --go: it installs the packages first."
+    exit 0
+fi
 python3 "$BUILDER" "${args[@]}" | sed 's/^/   /' || die "The zones could not be built (see above). Nothing was changed."
 # Check every zone before any of them goes live.
-while read -r z f; do
-    named-checkzone -q "$z" "$tmpd/zones/$f" || { named-checkzone "$z" "$tmpd/zones/$f" || true; die "Zone $z failed its check. Nothing was changed."; }
-done < "$tmpd/zones/zones.txt"
-echo "   every zone checks out"
+# named-checkzone comes with bind9-utils (step 1). In test mode on a fresh container it may not be there yet.
+if command -v named-checkzone >/dev/null; then
+    while read -r z f; do
+        named-checkzone -q "$z" "$tmpd/zones/$f" || { named-checkzone "$z" "$tmpd/zones/$f" || true; die "Zone $z failed its check. Nothing was changed."; }
+    done < "$tmpd/zones/zones.txt"
+    echo "   every zone checks out"
+elif (( GO )); then
+    die "named-checkzone is missing even after step 1. Install it: apt install -y bind9-utils, then run --go again."
+else
+    echo "   (zones not checked: BIND is not installed yet. --go installs it first, then checks them.)"
+fi
 while read -r z f; do
     put "$tmpd/zones/$f" "$ZONE_DIR/$f" 644 root:bind
 done < "$tmpd/zones/zones.txt"
