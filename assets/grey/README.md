@@ -15,6 +15,11 @@ See `network\registry\README.md`. Assets that read it clone `network/registry` b
 Generators read that file and write the DNS zones (forward and reverse), the GeoIP database and the registry (whois) records.
 A student who looks up an IP then gets the same answer from all three.
 
+Exercise teams do not change that file. They go in an overlay that each generator lays over it (same columns).
+The range control server, `assets/white/control/` (`greyctl`, 172.16.12.40 on WHITECELL, planned), is the one place that
+changes the grey cell, by hand or from ForgeRange through its API. It also snapshots the whole fake internet and resets it
+to zero (the clean core) at the end of an exercise, a semester or a year.
+
 To put one asset on a VM, clone only its folder. See "Get one asset onto a VM" in the top `README.md`.
 
 ## Build order
@@ -37,6 +42,7 @@ To put one asset on a VM, clone only its folder. See "Get one asset onto a VM" i
 | 13 | Update and intel feeds | `feeds\` | Suricata rules, ClamAV signatures, GeoIP update endpoint, IP reputation blocklist. | Not started |
 | 14 | Offline reference | `reference\` | Kiwix, so students have documentation in CLOSED mode. | Not started |
 | 15 | MQTT broker | `mqtt\` | Mosquitto for Cyber City tiles, at `mqtt.lab`. Open mode for attack labs, secure mode (logins, per-tile rights, optional TLS) for defend labs. | Script written and tested on a test machine, not built on the range yet |
+| 16 | Range control (white cell) | `..\white\control\` | `greyctl` and its API: exercise teams and domains, snapshots, reset to zero. The way ForgeRange changes the grey cell. Lives on WHITECELL because grey is in scope during exercises. | Script written and tested on a test machine, not built on the range yet |
 
 Two jobs are part of other builds, not assets of their own:
 

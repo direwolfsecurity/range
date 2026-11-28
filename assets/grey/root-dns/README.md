@@ -34,6 +34,7 @@ DNS is light work, so unprivileged containers from the Ubuntu 24.04 template are
 | `setup-root-dns.sh` | Both root VMs | Installs BIND and serves `.`. It sees which of the two IPs belongs to this VM and sets it up as primary or secondary. |
 | `add-tld.sh` | Root primary only | Adds or removes a TLD that lives on some other server (for example `.corp` on a team's domain controller). |
 | `registrar/setup-registrar.sh` | Both root VMs (optional) | Adds the registrar web site and hosts the TLDs it sells on the two roots. |
+| `registrar/install-remote.sh` | Root primary, once (registrars built before 2026-11-28) | Adds `cli.php export/import` and `registrar-remote`, the one command the range control server may run. |
 | `set-root-hints-ubuntu.sh` | Ubuntu resolvers (BIND or Unbound) | Points the resolver at our roots and turns off DNSSEC checking. |
 | `Set-RangeRootHints.ps1` | Windows DNS servers (domain controllers) | Same job on Windows. Can also clear forwarders. |
 
@@ -91,6 +92,18 @@ sudo -u www-data php /opt/registrar/cli.php add-ns acme.com ns1.acme.com 10.0.5.
 sudo -u www-data php /opt/registrar/cli.php close        # or open
 sudo registrar-apply                                      # publish to DNS
 ```
+
+Snapshots, for the range control server (`assets/white/control/`):
+
+```bash
+sudo -u www-data php /opt/registrar/cli.php export > registrar.json    # every TLD and domain, as JSON
+sudo -u www-data php /opt/registrar/cli.php import < registrar.json    # replace everything with it
+sudo registrar-apply
+```
+
+The control server uses these to snapshot the registrar and reset it to zero. It reaches the primary over SSH with a key
+that can run only `/usr/local/sbin/registrar-remote` (it allows `list export import add-a add-ns del apply` and checks every word).
+A registrar built before 2026-11-28 gets both with: `cd registrar && sudo bash install-remote.sh`.
 
 ## 4. Point the resolvers at the roots
 

@@ -120,7 +120,7 @@ fi
 # PRIMARY
 # =============================================================================
 [[ -f /etc/bind/zones/db.root ]] || die "/etc/bind/zones/db.root missing — run setup-root-dns.sh first."
-for f in registrar-apply app/lib.php app/cli.php app/public/index.php; do
+for f in registrar-apply registrar-remote app/lib.php app/cli.php app/public/index.php; do
   [[ -f "$HERE/$f" ]] || die "Missing $HERE/$f — run from the registrar/ folder."
 done
 REG_TLD="${REGISTRAR_DOMAIN#*.}"
@@ -137,6 +137,7 @@ mkdir -p /opt/registrar
 cp -r "$HERE/app/." /opt/registrar/
 chown -R root:root /opt/registrar; find /opt/registrar -type d -exec chmod 755 {} +; find /opt/registrar -type f -exec chmod 644 {} +
 install -m 755 -o root -g root "$HERE/registrar-apply" /usr/local/sbin/registrar-apply
+install -m 755 -o root -g root "$HERE/registrar-remote" /usr/local/sbin/registrar-remote   # for the range control server
 
 mkdir -p /etc/registrar /var/lib/registrar
 chown www-data:www-data /var/lib/registrar; chmod 750 /var/lib/registrar

@@ -12,6 +12,8 @@
 #
 # Safe to run again. Files it replaces are first copied to /var/backups/direwolf-geoip/.
 # After you change registry.csv: git pull, then sudo bash install.sh --go
+# Exercise teams (the overlay, OVERLAY_FILE in geoip.conf) are laid over registry.csv when it exists.
+# The range control server (assets/white/control) sends it and runs geoip-apply, which re-runs --go.
 #
 # License: GPL-3.0, Dire Wolf Security.
 
@@ -108,6 +110,20 @@ if [[ ! -f "$REGISTRY" || ! -f "$(dirname "$REGISTRY")/registry.py" ]]; then
     die "Can't find the registry at $REGISTRY. Clone both folders:  git sparse-checkout set assets/grey/geoip network/registry"
 fi
 REGISTRY="$(cd "$(dirname "$REGISTRY")" && pwd)/$(basename "$REGISTRY")"
+BASE_REGISTRY="$REGISTRY"
+
+# Exercise overlay: if it exists, every step below uses registry.csv + overlay, merged.
+# The merged copy sits next to a copy of registry.py, so the builder and tester read it as usual.
+OVERLAY="${OVERLAY_FILE:-}"
+MERGED_DIR=""
+if [[ -n "$OVERLAY" && -s "$OVERLAY" ]]; then
+    MERGED_DIR="$(mktemp -d)"
+    cp "$(dirname "$REGISTRY")/registry.py" "$MERGED_DIR/registry.py"
+    python3 "$MERGED_DIR/registry.py" "$REGISTRY" --overlay "$OVERLAY" --write "$MERGED_DIR/registry.csv" >/dev/null \
+        || { python3 "$MERGED_DIR/registry.py" "$REGISTRY" --overlay "$OVERLAY" || true; rm -rf "$MERGED_DIR"; \
+             die "The exercise overlay $OVERLAY does not fit registry.csv. Nothing was changed."; }
+    REGISTRY="$MERGED_DIR/registry.csv"
+fi
 
 SERVER_IP="$OPT_IP"
 if [[ -z "$SERVER_IP" ]]; then
@@ -204,7 +220,12 @@ fi
 
 # ---- Install ----
 say "GeoIP server: $SERVER_NAME at $SERVER_IP"
-echo "   registry: $REGISTRY"
+echo "   registry: $BASE_REGISTRY"
+if [[ -n "$MERGED_DIR" ]]; then
+    echo "   overlay:  $OVERLAY ($(($(wc -l < "$OVERLAY") - 1)) exercise network(s))"
+else
+    echo "   overlay:  none (no exercise teams)"
+fi
 echo "   HTTPS:    $HTTPS"
 (( GO )) || echo "   TEST MODE: nothing will change. Add --go to do it."
 if (( GO )) && [[ $EUID -ne 0 ]]; then die "Run with sudo."; fi
@@ -212,10 +233,17 @@ if (( GO )) && [[ $EUID -ne 0 ]]; then die "Run with sudo."; fi
 [[ "${ID:-}" == "ubuntu" ]] || warn "Written for Ubuntu 24.04. This is ${PRETTY_NAME:-unknown}."
 
 tmpd="$(mktemp -d)"
-trap 'rm -rf "$tmpd"' EXIT
+trap 'rm -rf "$tmpd" ${MERGED_DIR:+"$MERGED_DIR"}' EXIT
 
 say "1. Check the registry"
 python3 "$(dirname "$REGISTRY")/registry.py" "$REGISTRY" || die "Fix the registry first."
+
+say "1b. The apply command for the range control server"
+# geoip-apply is what the control server runs over SSH (its key can run nothing else).
+# It saves the overlay it is sent on stdin, then re-runs this script with --go.
+sed -e "s|@HERE@|$HERE|g" -e "s|@OVERLAY@|${OVERLAY_FILE:-/etc/direwolf-range/overlay.csv}|g" \
+    "$HERE/tools/geoip-apply" > "$tmpd/geoip-apply"
+put "$tmpd/geoip-apply" /usr/local/sbin/geoip-apply 755
 
 say "2. Packages"
 pkgs=(nginx libnginx-mod-http-geoip2 mmdb-bin python3 python3-maxminddb curl gzip openssl)

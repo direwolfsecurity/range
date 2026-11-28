@@ -41,6 +41,7 @@ Meridian Global Telecom, because the registry says so. The whois server (asset #
 | `install.sh` | Builds, tests and publishes the databases and sets up nginx. Test mode by default, acts with `--go`. |
 | `tools/build-mmdb.py` | The database writer. Standard library only, written from MaxMind's open format spec, commented for students. |
 | `tools/test-mmdb.py` | Looks up every registry network with MaxMind's own Python reader and compares. |
+| `tools/geoip-apply` | Installed to `/usr/local/sbin`: the one command the range control server may run here (exercise overlay) |
 | `client/range-geoip-client.sh` | Runs on a range **web server**: downloads the databases, keeps them updated, sets up Apache, nginx or PHP |
 | `client/apache-maxminddb.conf` | The Apache settings: which `MM_*` variables each request gets, and a geofencing example |
 | `client/nginx-geoip2.conf`, `client/geoip-demo.php`, `client/GeoIP.conf.example` | nginx settings, a "Where am I?" PHP page, settings for the stock `geoipupdate` |
@@ -115,6 +116,16 @@ as their `/etc/GeoIP.conf` and run `sudo geoipupdate -v`, exactly as on the real
 
 Web servers pick up the new databases by themselves within a day (their cron job), or at once with
 `sudo range-geoip-update`.
+
+## Exercise teams (the overlay)
+
+The range control server (`assets/white/control/`) can give a seat network a team's owner and place for an exercise.
+It sends the teams as an overlay file and runs `geoip-apply`, which `install.sh --go` installs in `/usr/local/sbin`.
+`geoip-apply` checks the overlay against `registry.csv`, saves it to `/etc/direwolf-range/overlay.csv` (`OVERLAY_FILE` in
+`geoip.conf`), and rebuilds. A bad overlay changes nothing. With no overlay file, it builds from `registry.csv` alone.
+
+The control server reaches it over SSH with a key that can run only `geoip-apply`. Its `install.sh --keys` prints the line
+to add to `/root/.ssh/authorized_keys` here.
 
 ## Make a range web server geo-aware
 

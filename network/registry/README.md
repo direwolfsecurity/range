@@ -61,6 +61,26 @@ python registry.py --lookup 192.168.204.10  # who owns this address?
 It checks every row (valid network, private ASN, known country, real time zone, lat/long in range, domain format)
 and across rows (no duplicates, one name per ASN, one org and domain per handle). Nothing builds from a file with errors.
 
+## Exercise teams: the overlay
+
+During an exercise, 3 to 5 teams each take over one or more seat networks and get their own made-up owner,
+AS number, place and domain. This file does not change for that. The teams go in an **overlay**: a second file with the
+same columns, written by the range control server (`assets/white/control/`, the `greyctl` command).
+Every generator lays the overlay over this file, so GeoIP, whois and DNS still agree.
+
+```
+python registry.py --overlay overlay.csv                       # check both together
+python registry.py --overlay overlay.csv --lookup 192.168.103.5
+python registry.py --overlay overlay.csv --write merged.csv    # the merged list, for a generator
+```
+
+The rules, so an exercise can never break the core:
+
+- An overlay row with the **same network as a seat** (a row whose `use` starts with `Seat `) replaces that seat.
+- Any other overlay row must not overlap a network in this file at all.
+- Overlay rows use AS numbers **65000-65499**, and org handles and domains this file does not use.
+- An empty or missing overlay means no exercise: the plain base world.
+
 ## Get it onto a server
 
 Assets that read the registry clone this folder as well as their own. For example, on the GeoIP server:
