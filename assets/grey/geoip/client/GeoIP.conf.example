@@ -1,0 +1,12 @@
+# GeoIP.conf for the stock geoipupdate tool (sudo apt install geoipupdate), pointed at the range.
+# Copy to /etc/GeoIP.conf, then run: sudo geoipupdate -v
+# Needs HTTPS on @SERVER_NAME@ (HTTPS="yes" in its geoip.conf) and this machine trusting the range root CA.
+# Any account ID and key work on the range. Never put a real MaxMind key here.
+#
+# License: GPL-3.0, Dire Wolf Security.
+
+AccountID 999999
+LicenseKey rangekey0000
+EditionIDs GeoLite2-City GeoLite2-Country GeoLite2-ASN
+Host @SERVER_NAME@
+DatabaseDirectory /var/lib/GeoIP

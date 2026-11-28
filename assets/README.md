@@ -28,6 +28,8 @@ Each VM gets only its own folder (see "Get one asset onto a VM" in the top `READ
 - Work with only its own folder present. Scripts find their files with
   `HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"` and never reach into a sibling asset or the repo root.
   If two assets need the same file, copy it into both.
+  One exception: the range registry (`network/registry/`) is shared on purpose, so every asset agrees on who owns
+  an address. Assets that read it add it to their clone: `git sparse-checkout set assets/<cell>/<asset> network/registry`.
 - Start its README build steps with the one-folder clone, using its own path:
 
 ```
