@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# registrar-remote - the only thing the range control server may run on the root primary.
+# Installed to /usr/local/sbin/registrar-remote. Runs as root, from a locked SSH key:
+#   from="<control IP>",restrict,command="/usr/local/sbin/registrar-remote" ssh-ed25519 AAAA... greyctl
+#
+# The control server asks for one of these (they arrive in SSH_ORIGINAL_COMMAND):
+#   list                                      domains, as JSON (same as export)
+#   export                                    a snapshot of the whole registrar, as JSON
+#   import                                    replace everything with the snapshot on stdin, then publish
+#   add-a NAME IP TAG                         register NAME -> IP for exercise TAG, then publish
+#   add-ns NAME NS1 [GLUE1] [NS2] [GLUE2] TAG delegate NAME for exercise TAG, then publish
+#   del NAME                                  delete NAME, then publish
+#   apply                                     publish (registrar-apply)
+# Every word is checked here, then cli.php and registrar-apply check everything again.
+#
+# License: GPL-3.0, Dire Wolf Security.
+
+set -euo pipefail
+
+CLI=(sudo -u www-data php /opt/registrar/cli.php)
+
+refuse() { echo "registrar-remote: $*" >&2; exit 64; }
+
+publish() {
+    if /usr/local/sbin/registrar-apply > /tmp/registrar-remote.log 2>&1; then
+        echo "published"
+    else
+        cat /tmp/registrar-remote.log >&2
+        echo "registrar-remote: registrar-apply failed" >&2
+        exit 1
+    fi
+}
+
+# Split the request into words. No quotes or shell tricks are allowed, only plain words.
+request="${SSH_ORIGINAL_COMMAND:-$*}"
+[[ "$request" =~ ^[A-Za-z0-9.:_\ -]*$ ]] || refuse "only letters, digits and . : _ - are allowed"
+read -r -a words <<< "$request"
+verb="${words[0]:-}"
+args=("${words[@]:1}")
+
+# Names, addresses and tags: plain words only (cli.php checks them properly).
+for a in "${args[@]}"; do
+    [[ "$a" =~ ^[A-Za-z0-9][A-Za-z0-9.:_-]{0,252}$ ]] || refuse "bad word '$a'"
+done
+
+case "$verb" in
+    list|export)
+        (( ${#args[@]} == 0 )) || refuse "$verb takes no words"
+        "${CLI[@]}" export
+        ;;
+    import)
+        (( ${#args[@]} == 0 )) || refuse "import takes no words (the snapshot comes on stdin)"
+        head -c 10485760 | "${CLI[@]}" import
+        publish
+        ;;
+    add-a)
+        (( ${#args[@]} == 3 )) || refuse "add-a NAME IP TAG"
+        "${CLI[@]}" add-a "${args[0]}" "${args[1]}" "--registrant=greyctl:${args[2]}"
+        publish
+        ;;
+    add-ns)
+        (( ${#args[@]} >= 3 && ${#args[@]} <= 6 )) || refuse "add-ns NAME NS1 [GLUE1] [NS2] [GLUE2] TAG"
+        tag="${args[-1]}"
+        unset 'args[-1]'
+        "${CLI[@]}" add-ns "${args[@]}" "--registrant=greyctl:$tag"
+        publish
+        ;;
+    del)
+        (( ${#args[@]} == 1 )) || refuse "del NAME"
+        "${CLI[@]}" del "${args[0]}"
+        publish
+        ;;
+    apply)
+        publish
+        ;;
+    *)
+        refuse "unknown request '$verb' (allowed: list export import add-a add-ns del apply)"
+        ;;
+esac

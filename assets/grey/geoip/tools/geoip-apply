@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# geoip-apply - rebuild the GeoIP databases with the exercise teams the control server sends.
+# Installed to /usr/local/sbin/geoip-apply by install.sh. Runs as root.
+#
+# The range control server runs it over SSH with a key that can run nothing else:
+#   geoip-apply overlay < overlay.csv     save the exercise overlay, then rebuild
+#   geoip-apply status                    print what is loaded (md5 of the overlay and the databases)
+# Anything else is refused. The overlay is checked before it is saved; a bad one changes nothing.
+#
+# License: GPL-3.0, Dire Wolf Security.
+
+set -euo pipefail
+
+HERE="@HERE@"
+OVERLAY="@OVERLAY@"
+
+# Over SSH the command the client asked for is in SSH_ORIGINAL_COMMAND; by hand it is "$*".
+request="${SSH_ORIGINAL_COMMAND:-$*}"
+
+case "$request" in
+    overlay)
+        tmp="$(mktemp)"
+        trap 'rm -f "$tmp"' EXIT
+        # Read at most 1 MB from stdin: an overlay for a handful of teams is a few KB.
+        head -c 1048576 > "$tmp"
+        if [[ -s "$tmp" ]]; then
+            source "$HERE/geoip.conf"
+            base="$HERE/$REGISTRY_FILE"
+            [[ "$REGISTRY_FILE" == /* ]] && base="$REGISTRY_FILE"
+            python3 "$(dirname "$base")/registry.py" "$base" --overlay "$tmp" || { echo "geoip-apply: overlay refused, nothing changed"; exit 2; }
+        fi
+        install -D -m 644 "$tmp" "$OVERLAY"
+        cd "$HERE"
+        bash install.sh --go > /var/log/geoip-apply.log 2>&1 || { tail -n 20 /var/log/geoip-apply.log; echo "geoip-apply: rebuild failed"; exit 1; }
+        lines=0
+        [[ -s "$OVERLAY" ]] && lines=$(($(grep -c . "$OVERLAY") - 1))
+        echo "geoip-apply: ok, $lines exercise network(s) loaded"
+        ;;
+    status)
+        if [[ -s "$OVERLAY" ]]; then echo "overlay $(md5sum < "$OVERLAY" | cut -c1-32)"; else echo "overlay none"; fi
+        for e in GeoLite2-City GeoLite2-Country GeoLite2-ASN; do
+            [[ -f "/var/lib/GeoIP/$e.mmdb" ]] && echo "$e $(md5sum < "/var/lib/GeoIP/$e.mmdb" | cut -c1-32)"
+        done
+        ;;
+    *)
+        echo "geoip-apply: only 'overlay' and 'status' are allowed (got '$request')" >&2
+        exit 64
+        ;;
+esac
