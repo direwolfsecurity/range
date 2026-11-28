@@ -13,7 +13,7 @@ dig -x 172.16.11.20       ->  ca.lab.
 So a student who looks up an address gets the same owner and city from reverse DNS, whois (`../whois/`) and GeoIP
 (`../geoip/`). The name even gives away the city, which is a real OSINT trick.
 
-Grey asset #3. Proposed address **172.16.11.13** (next to the roots at .11 and .12), name `a.in-addr-servers.arpa`
+Grey asset #3. Address **172.16.11.13** (confirmed by Tim 2026-11-28, next to the roots at .11 and .12), name `a.in-addr-servers.arpa`
 (the real ones are `a` to `f.in-addr-servers.arpa`). Ubuntu 24.04, BIND 9, a small LXC container is plenty. No Docker.
 
 License: CC BY-SA 4.0 for this guide, GPL-3.0 for the scripts. Dire Wolf Security.
@@ -41,10 +41,9 @@ How an address gets its name (first match wins):
 The zones use BIND's `$GENERATE`, so a whole /24 is one readable line. Open `/etc/bind/zones/rdns/db.in-addr.arpa` and
 show the class.
 
-**About the TLDs (`.com`, `.org`, `.lab` ...).** The grey cell list planned separate TLD servers. Today the registrar
-(`../root-dns/registrar/`) hosts every TLD it sells on the two roots, which works but means `dig +trace` shows the root
-answering for `.com` too. Moving TLDs to their own servers is a change to the roots and the registrar, not to this
-server, so it is left as an open decision (see the grey README).
+**About the TLDs (`.com`, `.org`, `.lab` ...).** The grey cell list once planned separate TLD servers. Decided
+2026-11-28: the registrar (`../root-dns/registrar/`) keeps hosting every TLD it sells on the two roots. So `dig +trace`
+shows the root answering for `.com` too, a known difference from the real internet.
 
 ## Files
 

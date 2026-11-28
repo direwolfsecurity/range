@@ -216,7 +216,9 @@ echo "   Exercise overlay: $OVERLAY ($([[ -s "$OVERLAY" ]] && echo "in use" || e
 echo "   Domains are asked from: $REGISTRAR_URL"
 (( GO )) || echo "   TEST MODE: nothing is changed. Add --go to do it."
 
-python3 "$(dirname "$REGISTRY")/registry.py" "$REGISTRY" >/dev/null || die "registry.csv has problems (run registry.py to see them)."
+if command -v python3 >/dev/null; then
+    python3 "$(dirname "$REGISTRY")/registry.py" "$REGISTRY" >/dev/null || die "registry.csv has problems (run registry.py to see them)."
+fi
 
 say "1. Packages"
 missing=()
